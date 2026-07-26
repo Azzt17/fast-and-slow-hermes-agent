@@ -19,3 +19,14 @@ Memakai `mem0ai` dalam mode OSS in-process sebagai storage dan mesin retrieval, 
 ## Konsekuensi
 
 Kita memperoleh fusion retrieval Mem0 tanpa mengorbankan kontrol kebijakan di SQLite. Trade-off-nya adalah dua sistem penyimpanan yang harus dijaga konsistensinya melalui `mem0_id`.
+
+## Tindak Lanjut
+
+Backend Chroma yang digunakan pada Fase 0–2 tidak mendukung pencarian keyword
+BM25, sehingga retrieval hybrid saat ini memakai semantic similarity saja.
+Evaluasi Qdrant dijadikan tindak lanjut sebelum memilih backend pengganti;
+perubahan backend harus mempertahankan Mem0 sebagai mesin retrieval dan SQLite
+sebagai shadow index.
+
+Catatan ini menyerap hasil eksperimen Fase 2 yang sebelumnya tersimpan pada
+`0001-architectural-decisions.md`; file eksperimen tersebut bukan ADR terpisah.
