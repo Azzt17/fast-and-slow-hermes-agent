@@ -1,0 +1,10 @@
+
+# Knowledge graph outputs
+graphify-out/
+# Python / local build artifacts
+__pycache__/
+*.pyc
+.venv/
+.codex/
+chroma_db_test/
+docs/t

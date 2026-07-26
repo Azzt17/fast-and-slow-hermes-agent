@@ -1,0 +1,4 @@
+name: hermes-dual-memory
+version: 0.0.0
+description: Dual-process memory provider scaffold for Hermes Agent.
+hooks: []
