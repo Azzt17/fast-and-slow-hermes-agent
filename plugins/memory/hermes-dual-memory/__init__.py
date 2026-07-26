@@ -101,9 +101,12 @@ class MemoryProvider(BaseMemoryProvider):
             try:
                 from openai import OpenAI
 
+                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "8"))
                 client = OpenAI(
                     api_key=llm_config["api_key"],
                     base_url=llm_config["openai_base_url"],
+                    timeout=timeout_seconds,
+                    max_retries=0,
                 )
                 model = llm_config["model"]
 
@@ -113,6 +116,7 @@ class MemoryProvider(BaseMemoryProvider):
                         messages=kwargs["messages"],
                         temperature=kwargs.get("temperature"),
                         max_tokens=kwargs.get("max_tokens"),
+                        timeout=timeout_seconds,
                     )
 
                 return configured_call
@@ -265,12 +269,19 @@ class MemoryProvider(BaseMemoryProvider):
     def get_config_schema(self) -> list[dict[str, Any]]:
         return []
 
-    def _consolidate(self, session_id: str) -> Optional[dict[str, Any]]:
+    def _consolidate(self, session_id: str, *, trigger: str = "unknown") -> Optional[dict[str, Any]]:
         store = self._store
         if store is None or not session_id:
             return None
         with self._consolidation_run_lock:
-            return self._consolidate_locked(store, session_id)
+            report = self._consolidate_locked(store, session_id)
+            if report is not None:
+                logger.warning(
+                    "System-2 consolidation completed trigger=%s session=%s",
+                    trigger,
+                    session_id,
+                )
+            return report
 
     def _consolidate_locked(self, store: HotSessionStore, session_id: str) -> Optional[dict[str, Any]]:
         rows = store.fetch_turns(session_id, consolidated=False)
@@ -303,6 +314,7 @@ class MemoryProvider(BaseMemoryProvider):
         thread = threading.Thread(
             target=self._consolidate,
             args=(session_id,),
+            kwargs={"trigger": "on_session_end"},
             name=f"{self.name}-consolidate-{session_id}",
             daemon=True,
         )
@@ -315,7 +327,7 @@ class MemoryProvider(BaseMemoryProvider):
         """Consolidate synchronously so compression retains the new summary."""
 
         del messages
-        report = self._consolidate(self._session_id)
+        report = self._consolidate(self._session_id, trigger="on_pre_compress")
         return report["summary"] if report else ""
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:

@@ -1,6 +1,6 @@
 # Fase 2: Trigger & Konsolidasi Sistem 2
 
-**Status**: Dalam Pengerjaan
+**Status**: Selesai
 
 ## Goal
 
@@ -15,8 +15,29 @@ minimal §4.2–§4.3.
 - Penandaan `hot_sessions.consolidated=1` hanya setelah essence berhasil ditulis.
 - Isolasi kegagalan API/Mem0 dari lifecycle Hermes.
 
-## Verifikasi Sementara
+## Hasil Verifikasi
 
-Unit test fake LLM/Mem0 mencakup retry, metadata §4.3, `infer=False`, daemon
-thread idle, dan kegagalan JSON. Uji Hermes+Mem0 nyata dan kriteria keluar fase
-masih menunggu environment `mem0ai` serta kredensial model yang aktif.
+- Unit suite pada venv Hermes: `6 tests`, semuanya `OK`.
+- `on_session_end` pada sesi Hermes nyata menulis essence ke Mem0/Chroma dan
+  mengubah seluruh baris hot session menjadi `consolidated=1`.
+- Compression alami Hermes terpicu dengan telemetry `trigger_source=auto` dan
+  `effective_threshold=1000`; hook `on_pre_compress` tetap terisolasi dari loop.
+- Jalur LLM konsolidasi memakai timeout eksplisit 8 detik (dapat diatur lewat
+  `HERMES_DUAL_MEMORY_LLM_TIMEOUT`) dan `max_retries=0`. Endpoint literal yang
+  tidak terjangkau mengembalikan `summary=''` dalam 0.214 detik setelah retry,
+  tanpa menggantung sesi.
+- Bukti runtime Mem0: `infer=False`, metadata memuat seluruh field §4.3.
+- Sesi Hermes substantif menghasilkan essence berikut:
+  - `summary`: keputusan memakai SQLite shadow index + Mem0/Chroma; risiko BM25
+    pada Chroma; tindak lanjut evaluasi Qdrant.
+  - `entities`: SQLite shadow index (technology), Mem0/Chroma (technology),
+    BM25 (algorithm), Qdrant (technology).
+  - `relations`: Mem0/Chroma tidak mendukung BM25; SQLite shadow index digunakan
+    bersama Mem0/Chroma.
+  - `memory_type`: `semantic`; `importance_score`: `5`; `new_skills=[]`;
+    `anomalies=[]`.
+
+## Status Kriteria Keluar
+
+Semua kriteria Fase 2 terverifikasi pada environment Hermes runtime dan Mem0
+asli. Keterbatasan Chroma+BM25 tetap menjadi tindak lanjut arsitektur.

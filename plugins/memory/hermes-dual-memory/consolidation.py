@@ -22,7 +22,7 @@ REQUIRED_FIELDS = (
 PROMPT_SYSTEM = (
     "Kamu adalah proses konsolidasi memori. Distilasi log mentah jadi entri "
     "terstruktur. Jangan tambahkan interpretasi yang tidak didukung teks. "
-    "Field yang tidak relevan boleh dikosongkan. Kembalikan JSON saja."
+    "Field yang tidak relevan boleh dikosongkan. Untuk sesi yang berisi keputusan/fakta yang dapat dipakai ulang, isi importance_score dengan nilai 1-10 yang mencerminkan kegunaan; gunakan 0 hanya bila benar-benar tidak ada informasi durable. Kembalikan JSON saja."
 )
 
 
@@ -160,12 +160,18 @@ def consolidate_once(
         "importance_score": report["importance_score"],
     }
     try:
+        logger.warning(
+            "Mem0 add starting with infer=False session=%s metadata_fields=%s",
+            session_id,
+            ",".join(REQUIRED_FIELDS),
+        )
         mem0_client.add(
             report["summary"],
             user_id=session_id,
             metadata=metadata,
             infer=False,
         )
+        logger.warning("Mem0 add completed with infer=False session=%s", session_id)
     except TypeError as exc:
         raise RuntimeError(
             "Mem0 client must support add(..., infer=False); refusing "
