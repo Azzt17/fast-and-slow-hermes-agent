@@ -58,6 +58,8 @@ class ConsolidationTest(unittest.TestCase):
             content, kwargs = mem0.calls[-1]
             self.assertEqual(content, summary)
             self.assertFalse(kwargs["infer"])
+            self.assertEqual(kwargs["user_id"], "default")
+            self.assertEqual(kwargs["metadata"]["session_id"], "session-1")
             self.assertEqual(kwargs["metadata"]["importance_score"], 8)
             self.assertEqual(kwargs["metadata"]["memory_type"], "semantic")
             self.assertEqual(kwargs["metadata"]["entities"], "[]")

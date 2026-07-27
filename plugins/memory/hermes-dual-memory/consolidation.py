@@ -118,6 +118,7 @@ def consolidate_once(
     rows: list[Mapping[str, Any]],
     llm_call: Callable[..., Any],
     mem0_client: Any,
+    user_id: str = "default",
 ) -> dict[str, Any]:
     """Run one consolidation, retrying malformed model output exactly once."""
 
@@ -167,7 +168,7 @@ def consolidate_once(
         )
         mem0_client.add(
             report["summary"],
-            user_id=session_id,
+            user_id=user_id,
             metadata=metadata,
             infer=False,
         )

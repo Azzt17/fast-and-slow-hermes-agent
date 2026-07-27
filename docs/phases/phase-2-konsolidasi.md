@@ -1,6 +1,7 @@
 # Fase 2: Trigger & Konsolidasi Sistem 2
 
 **Status**: Selesai
+**Tanggal Selesai**: 2026-07-27
 
 ## Goal
 
@@ -40,4 +41,4 @@ minimal §4.2–§4.3.
 ## Status Kriteria Keluar
 
 Semua kriteria Fase 2 terverifikasi pada environment Hermes runtime dan Mem0
-asli. Keterbatasan Chroma+BM25 tetap menjadi tindak lanjut arsitektur.
+asli. Keterbatasan Chroma+BM25 tetap menjadi tindak lanjut arsitektur. Identitas Mem0 stabil per profil didokumentasikan di ADR-0008 setelah tes recall Fase 3.
