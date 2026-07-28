@@ -87,6 +87,8 @@ class ShadowIndexTest(unittest.TestCase):
         def llm_call(**kwargs):
             if kwargs["task"] == "memory_consolidation":
                 return payload
+            if kwargs["task"] == "memory_admission":
+                return json.dumps({"safe": True, "reason": "controlled safe test"})
             if contradiction_calls is not None:
                 contradiction_calls.append(kwargs)
             return json.dumps({"contradiction": contradiction, "reason": "controlled test"})

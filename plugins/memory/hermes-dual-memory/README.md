@@ -17,3 +17,9 @@ and `on_session_end()` lifecycle hooks. Retrieval updates stability and access
 history; low-retrievability episodic entries move cold, repeated access can
 promote them, and similar cold clusters are compacted by System 2 with source
 lineage preserved. Semantic entries are excluded from decay (ADR-0010).
+
+Phase 6 adds two-layer admission before a persisted candidate becomes trusted:
+Hermes `tools.threat_patterns` strict scanning (with a standalone fallback),
+then a bounded semantic hidden-instruction review. Pattern/semantic failures and
+semantic unavailability are fail-closed to `quarantined`; the existing shadow
+status gate blocks them from retrieval and compression context (ADR-0011).

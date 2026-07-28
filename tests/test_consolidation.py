@@ -41,6 +41,8 @@ class ConsolidationTest(unittest.TestCase):
         responses = iter(["not json", self.payload])
 
         def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
             self.assertEqual(kwargs["task"], "memory_consolidation")
             return next(responses)
 
@@ -68,6 +70,8 @@ class ConsolidationTest(unittest.TestCase):
         mem0 = FakeMem0()
 
         def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
             return self.payload
 
         with tempfile.TemporaryDirectory() as tmp:

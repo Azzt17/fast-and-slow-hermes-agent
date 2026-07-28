@@ -209,6 +209,7 @@ def consolidate_once(
     llm_call: Callable[..., Any],
     mem0_client: Any,
     shadow_store: Any,
+    admission_check: Callable[[str], Any] | None = None,
     user_id: str = "default",
 ) -> dict[str, Any]:
     """Run one consolidation, retrying malformed model output exactly once."""
@@ -239,10 +240,13 @@ def consolidate_once(
     # Chroma accepts scalar metadata only (or non-empty primitive lists), while
     # §4.3 contains nested/possibly-empty collections. JSON strings preserve the
     # exact structured values without relying on backend-specific metadata rules.
+    admission = admission_check(report["summary"]) if admission_check is not None else None
+    final_status = str(getattr(admission, "status", "trusted"))
+    flagged_reason = getattr(admission, "flagged_reason", None)
     metadata = {
         "session_id": session_id,
         "source": "system-2-consolidation",
-        "status": "trusted",
+        "status": final_status,
         "shadow_index_version": 1,
         "summary": report["summary"],
         "new_skills": json.dumps(report["new_skills"], ensure_ascii=False),
@@ -252,12 +256,16 @@ def consolidate_once(
         "memory_type": report["memory_type"],
         "importance_score": report["importance_score"],
     }
-    superseded = find_superseded_memories(
-        report=report,
-        llm_call=llm_call,
-        mem0_client=mem0_client,
-        shadow_store=shadow_store,
-    )
+    if flagged_reason:
+        metadata["flagged_reason"] = str(flagged_reason)
+    superseded = []
+    if final_status == "trusted":
+        superseded = find_superseded_memories(
+            report=report,
+            llm_call=llm_call,
+            mem0_client=mem0_client,
+            shadow_store=shadow_store,
+        )
     logger.warning(
         "Mem0 add starting with infer=False session=%s metadata_fields=%s",
         session_id,
@@ -283,8 +291,15 @@ def consolidate_once(
         importance_score=report["importance_score"],
         entities=report["entities"],
         relations=report["relations"],
-        status="trusted",
+        status="candidate",
+    )
+    shadow_store.finalize_memory_admission(
+        mem0_id=mem0_id,
+        status=final_status,
+        flagged_reason=flagged_reason,
         supersedes=superseded,
     )
+    report["admission_status"] = final_status
+    report["flagged_reason"] = flagged_reason
     logger.warning("Mem0 add completed with infer=False session=%s", session_id)
     return report

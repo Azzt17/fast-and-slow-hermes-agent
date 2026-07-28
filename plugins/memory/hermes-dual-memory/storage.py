@@ -434,6 +434,7 @@ class HotSessionStore:
         entities: Sequence[Mapping[str, Any]],
         relations: Sequence[Mapping[str, Any]],
         status: str = "trusted",
+        flagged_reason: str | None = None,
         supersedes: Sequence[str] = (),
     ) -> int:
         """Record a Mem0 essence and atomically invalidate old shadows."""
@@ -443,21 +444,6 @@ class HotSessionStore:
             raise ValueError("mem0_id must not be empty")
 
         with self.connect() as conn:
-            if supersedes:
-                placeholders = ", ".join("?" for _ in supersedes)
-                conn.execute(
-                    f"""
-                    UPDATE memory_index
-                    SET
-                        t_invalid = CURRENT_TIMESTAMP,
-                        superseded_by = ?
-                    WHERE mem0_id IN ({placeholders})
-                      AND memory_type = 'semantic'
-                      AND t_invalid IS NULL
-                    """,
-                    (normalized_mem0_id, *supersedes),
-                )
-
             cursor = conn.execute(
                 """
                 INSERT INTO memory_index (
@@ -467,9 +453,10 @@ class HotSessionStore:
                     status,
                     t_valid,
                     importance_score,
-                    stability
+                    stability,
+                    flagged_reason
                 )
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
                 """,
                 (
                     normalized_mem0_id,
@@ -478,6 +465,7 @@ class HotSessionStore:
                     "candidate",
                     importance_score,
                     max(float(importance_score) / 2.0, 0.5),
+                    flagged_reason,
                 ),
             )
             memory_index_id = int(cursor.lastrowid)
@@ -538,11 +526,69 @@ class HotSessionStore:
                     claim_rows,
                 )
             if status != "candidate":
-                conn.execute(
-                    "UPDATE memory_index SET status = ? WHERE id = ?",
-                    (status, memory_index_id),
+                self._finalize_memory_in_connection(
+                    conn,
+                    mem0_id=normalized_mem0_id,
+                    status=status,
+                    flagged_reason=flagged_reason,
+                    supersedes=supersedes,
                 )
             return memory_index_id
+
+    @staticmethod
+    def _finalize_memory_in_connection(
+        conn: sqlite3.Connection,
+        *,
+        mem0_id: str,
+        status: str,
+        flagged_reason: str | None,
+        supersedes: Sequence[str],
+    ) -> None:
+        if status not in ("trusted", "quarantined"):
+            raise ValueError("final memory status must be trusted or quarantined")
+        if status == "trusted" and supersedes:
+            placeholders = ", ".join("?" for _ in supersedes)
+            conn.execute(
+                f"""
+                UPDATE memory_index
+                SET
+                    t_invalid = CURRENT_TIMESTAMP,
+                    superseded_by = ?
+                WHERE mem0_id IN ({placeholders})
+                  AND memory_type = 'semantic'
+                  AND t_invalid IS NULL
+                """,
+                (mem0_id, *supersedes),
+            )
+        result = conn.execute(
+            """
+            UPDATE memory_index
+            SET status = ?, flagged_reason = ?
+            WHERE mem0_id = ? AND status = 'candidate'
+            """,
+            (status, flagged_reason, mem0_id),
+        )
+        if int(result.rowcount) != 1:
+            raise ValueError("candidate shadow was not available for admission finalization")
+
+    def finalize_memory_admission(
+        self,
+        *,
+        mem0_id: str,
+        status: str,
+        flagged_reason: str | None = None,
+        supersedes: Sequence[str] = (),
+    ) -> None:
+        """Finalize a persisted candidate and atomically apply trusted supersedes."""
+
+        with self.connect() as conn:
+            self._finalize_memory_in_connection(
+                conn,
+                mem0_id=mem0_id,
+                status=status,
+                flagged_reason=flagged_reason,
+                supersedes=supersedes,
+            )
 
     def retrieval_states(self, mem0_ids: Sequence[str]) -> dict[str, dict[str, Any]]:
         """Return shadow policy state; missing IDs are legacy data."""
@@ -789,6 +835,8 @@ class HotSessionStore:
         session_id: str,
         importance_score: int | float,
         source_mem0_ids: Sequence[str],
+        status: str = "trusted",
+        flagged_reason: str | None = None,
         compacted_at: datetime | None = None,
     ) -> int:
         """Create a warm compacted shadow and invalidate sources with lineage."""
@@ -809,9 +857,10 @@ class HotSessionStore:
                     t_valid,
                     t_created,
                     importance_score,
-                    stability
+                    stability,
+                    flagged_reason
                 )
-                VALUES (?, ?, 'episodic', 'warm', 'trusted', ?, ?, ?, ?)
+                VALUES (?, ?, 'episodic', 'warm', 'candidate', ?, ?, ?, ?, ?)
                 """,
                 (
                     compacted_mem0_id,
@@ -820,9 +869,18 @@ class HotSessionStore:
                     now_text,
                     importance_score,
                     max(float(importance_score) / 2.0, 0.5),
+                    flagged_reason,
                 ),
             )
             compacted_index_id = int(cursor.lastrowid)
+            if status == "quarantined":
+                conn.execute(
+                    "UPDATE memory_index SET status = 'quarantined' WHERE id = ?",
+                    (compacted_index_id,),
+                )
+                return compacted_index_id
+            if status != "trusted":
+                raise ValueError("compacted memory status must be trusted or quarantined")
             placeholders = ", ".join("?" for _ in source_ids)
             source_rows = conn.execute(
                 f"""
@@ -861,6 +919,10 @@ class HotSessionStore:
                     (compacted_index_id, int(row["id"]))
                     for row in source_rows
                 ],
+            )
+            conn.execute(
+                "UPDATE memory_index SET status = 'trusted' WHERE id = ?",
+                (compacted_index_id,),
             )
         return compacted_index_id
 

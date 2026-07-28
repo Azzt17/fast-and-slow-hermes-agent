@@ -321,6 +321,41 @@ class DecayTest(unittest.TestCase):
             self.assertTrue(all(row["t_invalid"] is None for row in rows))
             self.assertEqual(mem0.add_calls, [])
 
+    def test_quarantined_compaction_does_not_invalidate_sources(self):
+        mem0 = FakeMem0()
+        mem0.seed("cold-a", "Related cold memory one.")
+        mem0.seed("cold-b", "Related cold memory two.")
+        decision = self.module._admission.AdmissionDecision(
+            status="quarantined",
+            flagged_reason="semantic_unsafe:compacted injection",
+            pattern_findings=(),
+            semantic_checked=True,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = self.module.HotSessionStore(tmpdir)
+            self.add_shadow(store, "cold-a")
+            self.add_shadow(store, "cold-b")
+            store.demote_memories(["cold-a", "cold-b"], demoted_at=self.now)
+
+            result = self.module._decay.run_decay_cycle(
+                shadow_store=store,
+                mem0_client=mem0,
+                llm_call=lambda **_: json.dumps(
+                    {"summary": "Unsafe compacted instruction.", "importance_score": 5}
+                ),
+                user_id="default",
+                now=self.now,
+                already_claimed=True,
+                admission_check=lambda _: decision,
+            )
+            rows = {row["mem0_id"]: row for row in store.fetch_memory_index()}
+
+            self.assertEqual(result["compacted"][0]["status"], "quarantined")
+            self.assertEqual(rows["compacted-1"]["status"], "quarantined")
+            self.assertTrue(all(rows[mem0_id]["t_invalid"] is None for mem0_id in ("cold-a", "cold-b")))
+            self.assertTrue(all(rows[mem0_id]["superseded_by"] is None for mem0_id in ("cold-a", "cold-b")))
+            self.assertEqual(store.fetch_compaction_sources("compacted-1"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

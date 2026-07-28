@@ -60,10 +60,23 @@ def _load_decay_module() -> Any:
     return module
 
 
+def _load_admission_module() -> Any:
+    """Load the sibling Phase 6 admission pipeline."""
+
+    path = Path(__file__).with_name("admission.py")
+    spec = importlib.util.spec_from_file_location("hermes_dual_memory.admission", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load admission module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 _storage = _load_storage_module()
 HotSessionStore = _storage.HotSessionStore
 _consolidation = _load_consolidation_module()
 _decay = _load_decay_module()
+_admission = _load_admission_module()
 
 
 def _estimate_token_count(content: str) -> int:
@@ -121,6 +134,9 @@ class MemoryProvider(BaseMemoryProvider):
         self._search_timeout = float(os.environ.get("HERMES_DUAL_MEMORY_SEARCH_TIMEOUT", "5.0"))
         self._compaction_timeout = float(
             os.environ.get("HERMES_DUAL_MEMORY_COMPACTION_TIMEOUT", "8.0")
+        )
+        self._admission_timeout = float(
+            os.environ.get("HERMES_DUAL_MEMORY_ADMISSION_TIMEOUT", "5.0")
         )
         self._queue_maintenance(trigger="initialize")
 
@@ -481,6 +497,11 @@ class MemoryProvider(BaseMemoryProvider):
                 llm_call=self._llm_call,
                 mem0_client=self._mem0,
                 shadow_store=store,
+                admission_check=lambda content: _admission.evaluate_admission(
+                    content,
+                    llm_call=self._llm_call,
+                    timeout_seconds=self._admission_timeout,
+                ),
                 user_id=self._memory_user_id,
             )
             store.mark_consolidated(session_id, [int(row["id"]) for row in rows])
@@ -501,6 +522,11 @@ class MemoryProvider(BaseMemoryProvider):
                 user_id=self._memory_user_id,
                 already_claimed=already_claimed,
                 timeout_seconds=self._compaction_timeout,
+                admission_check=lambda content: _admission.evaluate_admission(
+                    content,
+                    llm_call=self._llm_call,
+                    timeout_seconds=self._admission_timeout,
+                ),
             )
             if result["ran"]:
                 logger.warning(
@@ -552,7 +578,9 @@ class MemoryProvider(BaseMemoryProvider):
 
         del messages
         report = self._consolidate(self._session_id, trigger="on_pre_compress")
-        return report["summary"] if report else ""
+        if not report or report.get("admission_status") != "trusted":
+            return ""
+        return str(report["summary"])
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
         return []

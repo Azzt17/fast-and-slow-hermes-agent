@@ -176,6 +176,7 @@ def compact_cold_memories(
     user_id: str,
     now: datetime,
     timeout_seconds: float,
+    admission_check: Callable[[str], Any] | None = None,
     similarity_threshold: float = COMPACTION_SIMILARITY_THRESHOLD,
 ) -> list[dict[str, Any]]:
     cold_memories = shadow_store.active_cold_memories()
@@ -222,15 +223,20 @@ def compact_cold_memories(
             float(payload["importance_score"]),
             max(importance[source_id] for source_id in source_ids),
         )
+        admission = admission_check(summary) if admission_check is not None else None
+        final_status = str(getattr(admission, "status", "trusted"))
+        flagged_reason = getattr(admission, "flagged_reason", None)
         metadata = {
             "session_id": f"cold-compaction:{now.date().isoformat()}:{cluster_index}",
             "source": "system-2-cold-compaction",
-            "status": "trusted",
+            "status": final_status,
             "shadow_index_version": 1,
             "memory_type": "episodic",
             "importance_score": score,
             "compacted_from": json.dumps(source_ids),
         }
+        if flagged_reason:
+            metadata["flagged_reason"] = str(flagged_reason)
         try:
             add_result = mem0_client.add(
                 summary,
@@ -244,6 +250,8 @@ def compact_cold_memories(
                 session_id=metadata["session_id"],
                 importance_score=score,
                 source_mem0_ids=source_ids,
+                status=final_status,
+                flagged_reason=flagged_reason,
                 compacted_at=now,
             )
         except Exception:
@@ -254,6 +262,7 @@ def compact_cold_memories(
                 "mem0_id": compacted_mem0_id,
                 "source_mem0_ids": source_ids,
                 "summary": summary,
+                "status": final_status,
             }
         )
     return compacted
@@ -268,6 +277,7 @@ def run_decay_cycle(
     now: datetime | None = None,
     already_claimed: bool = False,
     timeout_seconds: float = 8.0,
+    admission_check: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if not already_claimed and not shadow_store.claim_decay_cycle(now=current):
@@ -290,6 +300,7 @@ def run_decay_cycle(
                 user_id=user_id,
                 now=current,
                 timeout_seconds=timeout_seconds,
+                admission_check=admission_check,
             )
         except Exception:
             logger.exception("Cold compaction cycle failed; decay demotions remain committed")
