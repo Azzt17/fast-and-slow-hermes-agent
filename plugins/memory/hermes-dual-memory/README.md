@@ -23,3 +23,10 @@ Hermes `tools.threat_patterns` strict scanning (with a standalone fallback),
 then a bounded semantic hidden-instruction review. Pattern/semantic failures and
 semantic unavailability are fail-closed to `quarantined`; the existing shadow
 status gate blocks them from retrieval and compression context (ADR-0011).
+
+Phase 7 routes trusted `new_skills` into JSON drafts under
+`~/.hermes/hermes-dual-memory/skill-drafts/`, outside the active Skills tree.
+Near-duplicates are marked `redundant`. Pending drafts require explicit
+`hermes hermes-dual-memory skills approve <draft-id>` promotion; the plugin then
+reuses Hermes' native skill validator/security writer and marks the result
+agent-created so the built-in Curator owns subsequent lifecycle (ADR-0012).

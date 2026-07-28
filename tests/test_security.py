@@ -245,7 +245,12 @@ class SecurityAdmissionTest(unittest.TestCase):
         payload = json.dumps(
             {
                 "summary": "Farid prefers Toraja coffee.",
-                "new_skills": [],
+                "new_skills": [
+                    {
+                        "title": "Prepare Toraja coffee",
+                        "detail": "Measure the beans, grind them, brew carefully, and record the result.",
+                    }
+                ],
                 "anomalies": [],
                 "entities": [],
                 "relations": [],
@@ -282,6 +287,11 @@ class SecurityAdmissionTest(unittest.TestCase):
 
             self.assertEqual(row["status"], "candidate")
             self.assertEqual(provider.prefetch("Toraja coffee"), "")
+            drafts = self.module._procedural.SkillDraftStore(tmpdir).list()
+            self.assertEqual(len(drafts), 1)
+            self.assertEqual(drafts[0]["status"], "candidate")
+            with self.assertRaisesRegex(ValueError, "not approvable"):
+                self.module._procedural.SkillDraftStore(tmpdir).approve(drafts[0]["id"])
             provider.shutdown()
 
 

@@ -71,12 +71,24 @@ def _load_admission_module() -> Any:
     spec.loader.exec_module(module)
     return module
 
+def _load_procedural_module() -> Any:
+    """Load the sibling Phase 7 procedural-memory workflow."""
+
+    path = Path(__file__).with_name("procedural.py")
+    spec = importlib.util.spec_from_file_location("hermes_dual_memory.procedural", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load procedural module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 _storage = _load_storage_module()
 HotSessionStore = _storage.HotSessionStore
 _consolidation = _load_consolidation_module()
 _decay = _load_decay_module()
 _admission = _load_admission_module()
+_procedural = _load_procedural_module()
 
 
 def _estimate_token_count(content: str) -> int:
@@ -147,7 +159,7 @@ class MemoryProvider(BaseMemoryProvider):
             try:
                 from openai import OpenAI
 
-                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "8"))
+                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "30"))
                 client = OpenAI(
                     api_key=llm_config["api_key"],
                     base_url=llm_config["openai_base_url"],
@@ -501,6 +513,15 @@ class MemoryProvider(BaseMemoryProvider):
                     content,
                     llm_call=self._llm_call,
                     timeout_seconds=self._admission_timeout,
+                ),
+                skill_router=lambda report: _procedural.route_new_skills(
+                    report=report,
+                    session_id=session_id,
+                    hermes_home=self._hermes_home,
+                ),
+                skill_finalizer=lambda drafts: _procedural.finalize_skill_drafts(
+                    drafts=drafts,
+                    hermes_home=self._hermes_home,
                 ),
                 user_id=self._memory_user_id,
             )

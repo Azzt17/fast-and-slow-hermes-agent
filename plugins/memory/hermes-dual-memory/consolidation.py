@@ -19,10 +19,21 @@ REQUIRED_FIELDS = (
     "memory_type",
     "importance_score",
 )
+MAX_NEW_SKILLS = 3
+MAX_SKILL_TITLE_CHARS = 80
+MAX_SKILL_DETAIL_CHARS = 1200
 PROMPT_SYSTEM = (
     "Kamu adalah proses konsolidasi memori. Distilasi log mentah jadi entri "
     "terstruktur. Jangan tambahkan interpretasi yang tidak didukung teks. "
-    "Field yang tidak relevan boleh dikosongkan. Untuk sesi yang berisi keputusan/fakta yang dapat dipakai ulang, isi importance_score dengan nilai 1-10 yang mencerminkan kegunaan; gunakan 0 hanya bila benar-benar tidak ada informasi durable. Kembalikan JSON saja."
+    "Field yang tidak relevan boleh dikosongkan. Isi new_skills hanya untuk "
+    "prosedur reusable multi-langkah yang benar-benar berhasil didemonstrasikan "
+    "dalam sesi; detail harus berupa instruksi lengkap yang dapat dijalankan "
+    "ulang, bukan fakta atau ringkasan. Untuk sesi yang berisi keputusan/fakta "
+    "yang dapat dipakai ulang, isi importance_score dengan nilai 1-10 yang "
+    "mencerminkan kegunaan; gunakan 0 hanya bila benar-benar tidak ada informasi "
+    "durable. Maksimal 3 new_skills; setiap title maksimal 80 karakter dan "
+    "detail maksimal 1200 karakter. Summary maksimal 150 kata. Kembalikan JSON "
+    "saja tanpa Markdown."
 )
 
 
@@ -83,11 +94,24 @@ def parse_report(raw: Any) -> dict[str, Any]:
     if not isinstance(report["summary"], str):
         raise ValueError("summary must be a string")
     if not isinstance(report["new_skills"], list) or not all(
-        isinstance(item, dict) and isinstance(item.get("title", ""), str)
-        and isinstance(item.get("detail", ""), str)
+        isinstance(item, dict)
+        and isinstance(item.get("title"), str)
+        and bool(item["title"].strip())
+        and isinstance(item.get("detail"), str)
+        and bool(item["detail"].strip())
         for item in report["new_skills"]
     ):
-        raise ValueError("new_skills must be a list of {title, detail}")
+        raise ValueError("new_skills must be a list of non-empty {title, detail}")
+    if len(report["new_skills"]) > MAX_NEW_SKILLS:
+        raise ValueError(f"new_skills cannot exceed {MAX_NEW_SKILLS} items")
+    if any(len(item["title"].strip()) > MAX_SKILL_TITLE_CHARS for item in report["new_skills"]):
+        raise ValueError(f"new_skills title cannot exceed {MAX_SKILL_TITLE_CHARS} characters")
+    if any(len(item["detail"].strip()) > MAX_SKILL_DETAIL_CHARS for item in report["new_skills"]):
+        raise ValueError(f"new_skills detail cannot exceed {MAX_SKILL_DETAIL_CHARS} characters")
+    report["new_skills"] = [
+        {"title": item["title"].strip(), "detail": item["detail"].strip()}
+        for item in report["new_skills"]
+    ]
     if not isinstance(report["anomalies"], list) or not all(
         isinstance(item, str) for item in report["anomalies"]
     ):
@@ -210,6 +234,8 @@ def consolidate_once(
     mem0_client: Any,
     shadow_store: Any,
     admission_check: Callable[[str], Any] | None = None,
+    skill_router: Callable[[dict[str, Any]], list[dict[str, Any]]] | None = None,
+    skill_finalizer: Callable[[list[dict[str, Any]]], list[dict[str, Any]]] | None = None,
     user_id: str = "default",
 ) -> dict[str, Any]:
     """Run one consolidation, retrying malformed model output exactly once."""
@@ -217,13 +243,14 @@ def consolidate_once(
     messages = build_prompt(session_id, rows)
     report: dict[str, Any] | None = None
     last_error: Exception | None = None
+    attempt_messages = messages
     for attempt in range(2):
         try:
             response = llm_call(
                 task="memory_consolidation",
-                messages=messages,
+                messages=attempt_messages,
                 temperature=0,
-                max_tokens=2000,
+                max_tokens=3000,
             )
             report = parse_report(response)
             break
@@ -231,6 +258,17 @@ def consolidate_once(
             last_error = exc
             if attempt == 0:
                 logger.warning("Consolidation attempt failed; retrying once: %s", exc)
+                attempt_messages = messages + [
+                    {
+                        "role": "user",
+                        "content": (
+                            "Respons sebelumnya invalid atau terpotong. Ulangi dari log yang "
+                            "sama sebagai satu object JSON valid dan ringkas. Patuhi batas: "
+                            "summary <=150 kata, maksimal 3 new_skills, title <=80 karakter, "
+                            "detail <=1200 karakter per skill. Jangan gunakan Markdown fence."
+                        ),
+                    }
+                ]
             else:
                 logger.exception("Consolidation failed for session %s", session_id)
     if report is None:
@@ -240,16 +278,32 @@ def consolidate_once(
     # Chroma accepts scalar metadata only (or non-empty primitive lists), while
     # §4.3 contains nested/possibly-empty collections. JSON strings preserve the
     # exact structured values without relying on backend-specific metadata rules.
-    admission = admission_check(report["summary"]) if admission_check is not None else None
+    admission_content = "\n".join(
+        [report["summary"]]
+        + [
+            f"Proposed skill: {item['title']}\n{item['detail']}"
+            for item in report["new_skills"]
+        ]
+    )
+    admission = admission_check(admission_content) if admission_check is not None else None
     final_status = str(getattr(admission, "status", "trusted"))
     flagged_reason = getattr(admission, "flagged_reason", None)
+    report["admission_status"] = final_status
+    report["flagged_reason"] = flagged_reason
+    skill_drafts: list[dict[str, Any]] = []
+    if final_status == "trusted" and report["new_skills"]:
+        if skill_router is None or skill_finalizer is None:
+            raise RuntimeError("trusted new_skills require procedural skill routing and finalization")
+        skill_drafts = skill_router(report)
+    report["skill_drafts"] = skill_drafts
     metadata = {
         "session_id": session_id,
         "source": "system-2-consolidation",
         "status": final_status,
         "shadow_index_version": 1,
         "summary": report["summary"],
-        "new_skills": json.dumps(report["new_skills"], ensure_ascii=False),
+        "new_skill_count": len(report["new_skills"]),
+        "skill_draft_ids": json.dumps([draft["id"] for draft in skill_drafts]),
         "anomalies": json.dumps(report["anomalies"], ensure_ascii=False),
         "entities": json.dumps(report["entities"], ensure_ascii=False),
         "relations": json.dumps(report["relations"], ensure_ascii=False),
@@ -299,7 +353,9 @@ def consolidate_once(
         flagged_reason=flagged_reason,
         supersedes=superseded,
     )
-    report["admission_status"] = final_status
-    report["flagged_reason"] = flagged_reason
+    if skill_drafts:
+        assert skill_finalizer is not None
+        skill_drafts = skill_finalizer(skill_drafts)
+        report["skill_drafts"] = skill_drafts
     logger.warning("Mem0 add completed with infer=False session=%s", session_id)
     return report

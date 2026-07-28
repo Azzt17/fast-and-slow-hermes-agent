@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import tempfile
 import time
 import unittest
@@ -39,11 +40,13 @@ class ConsolidationTest(unittest.TestCase):
     def test_pre_compress_retries_and_writes_structured_mem0_without_inference(self):
         mem0 = FakeMem0()
         responses = iter(["not json", self.payload])
+        consolidation_messages = []
 
         def llm_call(**kwargs):
             if kwargs["task"] == "memory_admission":
                 return '{"safe":true,"reason":"ordinary durable fact"}'
             self.assertEqual(kwargs["task"], "memory_consolidation")
+            consolidation_messages.append(kwargs["messages"])
             return next(responses)
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -65,6 +68,9 @@ class ConsolidationTest(unittest.TestCase):
             self.assertEqual(kwargs["metadata"]["importance_score"], 8)
             self.assertEqual(kwargs["metadata"]["memory_type"], "semantic")
             self.assertEqual(kwargs["metadata"]["entities"], "[]")
+            self.assertEqual(len(consolidation_messages), 2)
+            self.assertIn("Respons sebelumnya invalid", consolidation_messages[1][-1]["content"])
+            self.assertEqual(consolidation_messages[0], consolidation_messages[1][:-1])
 
     def test_session_end_hook_is_daemon_and_consolidates(self):
         mem0 = FakeMem0()
@@ -108,6 +114,25 @@ class ConsolidationTest(unittest.TestCase):
             self.assertEqual(calls, 2)
             self.assertEqual(provider._store.pending_count("session-3"), 2)
             self.assertEqual(mem0.calls, [])
+
+    def test_new_skill_output_limits_are_enforced(self):
+        consolidation = self.module._consolidation
+        base = {
+            "summary": "Reusable procedure",
+            "new_skills": [],
+            "anomalies": [],
+            "entities": [],
+            "relations": [],
+            "memory_type": "episodic",
+            "importance_score": 5,
+        }
+        too_many = dict(base, new_skills=[{"title": f"Skill {index}", "detail": "Do it."} for index in range(4)])
+        with self.assertRaisesRegex(ValueError, "cannot exceed 3 items"):
+            consolidation.parse_report(json.dumps(too_many))
+
+        oversized = dict(base, new_skills=[{"title": "Valid title", "detail": "x" * 1201}])
+        with self.assertRaisesRegex(ValueError, "detail cannot exceed 1200"):
+            consolidation.parse_report(json.dumps(oversized))
 
 
 if __name__ == "__main__":

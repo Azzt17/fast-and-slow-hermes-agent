@@ -94,6 +94,29 @@ class HermesMemoryHookIntegrationTest(unittest.TestCase):
                 else:
                     os.environ["HERMES_HOME"] = old_hermes_home
 
+    def test_procedural_skill_output_passes_native_hermes_validator(self):
+        procedural_path = REPO_PROVIDER_DIR / "procedural.py"
+        spec = __import__("importlib.util").util.spec_from_file_location(
+            "hermes_dual_memory_native_format_test",
+            procedural_path,
+        )
+        procedural = __import__("importlib.util").util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(procedural)
+
+        from tools.skill_manager_tool import _validate_frontmatter
+        from tools.skills_tool import _parse_frontmatter
+
+        name, description, content = procedural.render_skill(
+            "Verify complex deployment",
+            "Inspect state, run checks, compare outputs, deploy safely, and record evidence.",
+        )
+        self.assertIsNone(_validate_frontmatter(content, new_skill=True))
+        frontmatter, body = _parse_frontmatter(content)
+        self.assertEqual(frontmatter["name"], name)
+        self.assertEqual(frontmatter["description"], description)
+        self.assertTrue(body.strip())
+
 
 if __name__ == "__main__":
     unittest.main()
