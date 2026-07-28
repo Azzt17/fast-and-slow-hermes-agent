@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
@@ -83,6 +84,39 @@ CREATE INDEX IF NOT EXISTS idx_memory_relation_claim
 ON memory_relations(source_entity_key, relation_key, memory_index_id)
 """
 
+MAINTENANCE_STATE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS maintenance_state (
+    key    TEXT PRIMARY KEY,
+    value  TEXT NOT NULL
+)
+"""
+
+MEMORY_LIFECYCLE_EVENTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS memory_lifecycle_events (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    memory_index_id  INTEGER NOT NULL,
+    event_type       TEXT NOT NULL,
+    occurred_at      DATETIME NOT NULL,
+    FOREIGN KEY (memory_index_id) REFERENCES memory_index(id)
+)
+"""
+
+MEMORY_LIFECYCLE_EVENTS_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_memory_lifecycle_event
+ON memory_lifecycle_events(memory_index_id, event_type, occurred_at)
+"""
+
+MEMORY_COMPACTION_SOURCES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS memory_compaction_sources (
+    compacted_memory_index_id  INTEGER NOT NULL,
+    source_memory_index_id     INTEGER NOT NULL,
+    created_at                 DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (compacted_memory_index_id, source_memory_index_id),
+    FOREIGN KEY (compacted_memory_index_id) REFERENCES memory_index(id),
+    FOREIGN KEY (source_memory_index_id) REFERENCES memory_index(id)
+)
+"""
+
 
 def resolve_hot_sessions_db_path(base_path: str | Path) -> Path:
     """Resolve the shared SQLite file used by this provider."""
@@ -99,6 +133,25 @@ def normalize_claim_key(value: object) -> str:
     """Return a stable key for conservative entity and relation matching."""
 
     return " ".join(str(value or "").strip().casefold().split())
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def db_timestamp(value: datetime) -> str:
+    normalized = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    return normalized.astimezone(timezone.utc).isoformat()
+
+
+def parse_db_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def normalized_claims(
@@ -176,6 +229,20 @@ class HotSessionStore:
             conn.execute(MEMORY_ENTITIES_INDEX)
             conn.execute(MEMORY_RELATIONS_SCHEMA)
             conn.execute(MEMORY_RELATIONS_INDEX)
+            conn.execute(MAINTENANCE_STATE_SCHEMA)
+            conn.execute(MEMORY_LIFECYCLE_EVENTS_SCHEMA)
+            conn.execute(MEMORY_LIFECYCLE_EVENTS_INDEX)
+            conn.execute(MEMORY_COMPACTION_SOURCES_SCHEMA)
+            conn.execute(
+                """
+                UPDATE memory_index
+                SET stability = CASE
+                    WHEN importance_score / 2.0 < 0.5 THEN 0.5
+                    ELSE importance_score / 2.0
+                END
+                WHERE access_count = 0
+                """
+            )
 
     def add_turn(
         self,
@@ -399,9 +466,10 @@ class HotSessionStore:
                     memory_type,
                     status,
                     t_valid,
-                    importance_score
+                    importance_score,
+                    stability
                 )
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
                 """,
                 (
                     normalized_mem0_id,
@@ -409,6 +477,7 @@ class HotSessionStore:
                     memory_type,
                     "candidate",
                     importance_score,
+                    max(float(importance_score) / 2.0, 0.5),
                 ),
             )
             memory_index_id = int(cursor.lastrowid)
@@ -498,6 +567,319 @@ class HotSessionStore:
             }
             for row in rows
         }
+
+    def record_accesses(
+        self,
+        mem0_ids: Sequence[str],
+        *,
+        accessed_at: datetime | None = None,
+    ) -> dict[str, str]:
+        """Record visible retrievals and promote eligible cold episodic rows."""
+
+        unique_ids = sorted({str(mem0_id) for mem0_id in mem0_ids if str(mem0_id).strip()})
+        if not unique_ids:
+            return {}
+        now = accessed_at or utc_now()
+        now_text = db_timestamp(now)
+        window_start = db_timestamp(now - timedelta(days=7))
+        placeholders = ", ".join("?" for _ in unique_ids)
+        promoted: dict[str, str] = {}
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT id, mem0_id, memory_type, tier
+                FROM memory_index
+                WHERE mem0_id IN ({placeholders})
+                  AND status = 'trusted'
+                  AND t_invalid IS NULL
+                """,
+                unique_ids,
+            ).fetchall()
+            for row in rows:
+                memory_index_id = int(row["id"])
+                conn.execute(
+                    """
+                    UPDATE memory_index
+                    SET
+                        access_count = access_count + 1,
+                        last_accessed = ?,
+                        stability = MAX(stability, 0.5) * 1.5
+                    WHERE id = ?
+                    """,
+                    (now_text, memory_index_id),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO memory_lifecycle_events (
+                        memory_index_id,
+                        event_type,
+                        occurred_at
+                    )
+                    VALUES (?, 'access', ?)
+                    """,
+                    (memory_index_id, now_text),
+                )
+                if row["memory_type"] != "episodic" or row["tier"] != "cold":
+                    continue
+                demoted = conn.execute(
+                    """
+                    SELECT occurred_at
+                    FROM memory_lifecycle_events
+                    WHERE memory_index_id = ? AND event_type = 'demoted'
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (memory_index_id,),
+                ).fetchone()
+                if demoted is None:
+                    continue
+                demoted_at = str(demoted["occurred_at"])
+                parsed_demoted_at = parse_db_timestamp(demoted_at)
+                if parsed_demoted_at is None or now > parsed_demoted_at + timedelta(days=7):
+                    continue
+                access_row = conn.execute(
+                    """
+                    SELECT COUNT(*) AS count
+                    FROM memory_lifecycle_events
+                    WHERE memory_index_id = ?
+                      AND event_type = 'access'
+                      AND occurred_at >= ?
+                      AND occurred_at >= ?
+                    """,
+                    (memory_index_id, demoted_at, window_start),
+                ).fetchone()
+                if access_row is not None and int(access_row["count"]) >= 2:
+                    conn.execute(
+                        "UPDATE memory_index SET tier = 'warm' WHERE id = ?",
+                        (memory_index_id,),
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO memory_lifecycle_events (
+                            memory_index_id,
+                            event_type,
+                            occurred_at
+                        )
+                        VALUES (?, 'promoted', ?)
+                        """,
+                        (memory_index_id, now_text),
+                    )
+                    promoted[str(row["mem0_id"])] = "warm"
+        return promoted
+
+    def claim_decay_cycle(
+        self,
+        *,
+        now: datetime | None = None,
+        interval: timedelta = timedelta(hours=24),
+    ) -> bool:
+        """Atomically claim a full maintenance cycle if the interval elapsed."""
+
+        current = now or utc_now()
+        threshold = current - interval
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO maintenance_state (key, value)
+                VALUES ('last_decay_run', ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                WHERE maintenance_state.value <= ?
+                """,
+                (db_timestamp(current), db_timestamp(threshold)),
+            )
+        return int(cursor.rowcount) == 1
+
+    def get_maintenance_state(self, key: str) -> str | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM maintenance_state WHERE key = ?",
+                (key,),
+            ).fetchone()
+        return str(row["value"]) if row is not None else None
+
+    def episodic_decay_candidates(self) -> list[dict[str, Any]]:
+        """Return active trusted episodic shadows eligible for decay."""
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    id,
+                    mem0_id,
+                    tier,
+                    t_created,
+                    last_accessed,
+                    stability,
+                    importance_score
+                FROM memory_index
+                WHERE memory_type = 'episodic'
+                  AND status = 'trusted'
+                  AND t_invalid IS NULL
+                ORDER BY id ASC
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def demote_memories(
+        self,
+        mem0_ids: Sequence[str],
+        *,
+        demoted_at: datetime | None = None,
+    ) -> int:
+        """Demote active trusted episodic rows and record lifecycle events."""
+
+        unique_ids = sorted({str(mem0_id) for mem0_id in mem0_ids if str(mem0_id).strip()})
+        if not unique_ids:
+            return 0
+        now_text = db_timestamp(demoted_at or utc_now())
+        placeholders = ", ".join("?" for _ in unique_ids)
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT id
+                FROM memory_index
+                WHERE mem0_id IN ({placeholders})
+                  AND memory_type = 'episodic'
+                  AND status = 'trusted'
+                  AND t_invalid IS NULL
+                  AND tier != 'cold'
+                """,
+                unique_ids,
+            ).fetchall()
+            memory_ids = [int(row["id"]) for row in rows]
+            if not memory_ids:
+                return 0
+            id_placeholders = ", ".join("?" for _ in memory_ids)
+            conn.execute(
+                f"UPDATE memory_index SET tier = 'cold' WHERE id IN ({id_placeholders})",
+                memory_ids,
+            )
+            conn.executemany(
+                """
+                INSERT INTO memory_lifecycle_events (
+                    memory_index_id,
+                    event_type,
+                    occurred_at
+                )
+                VALUES (?, 'demoted', ?)
+                """,
+                [(memory_id, now_text) for memory_id in memory_ids],
+            )
+        return len(memory_ids)
+
+    def active_cold_memories(self) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, mem0_id, session_id, importance_score
+                FROM memory_index
+                WHERE memory_type = 'episodic'
+                  AND tier = 'cold'
+                  AND status = 'trusted'
+                  AND t_invalid IS NULL
+                ORDER BY id ASC
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def record_compaction(
+        self,
+        *,
+        compacted_mem0_id: str,
+        session_id: str,
+        importance_score: int | float,
+        source_mem0_ids: Sequence[str],
+        compacted_at: datetime | None = None,
+    ) -> int:
+        """Create a warm compacted shadow and invalidate sources with lineage."""
+
+        source_ids = sorted({str(mem0_id) for mem0_id in source_mem0_ids if str(mem0_id).strip()})
+        if len(source_ids) < 2:
+            raise ValueError("cold compaction requires at least two source memories")
+        now_text = db_timestamp(compacted_at or utc_now())
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO memory_index (
+                    mem0_id,
+                    session_id,
+                    memory_type,
+                    tier,
+                    status,
+                    t_valid,
+                    t_created,
+                    importance_score,
+                    stability
+                )
+                VALUES (?, ?, 'episodic', 'warm', 'trusted', ?, ?, ?, ?)
+                """,
+                (
+                    compacted_mem0_id,
+                    session_id,
+                    now_text,
+                    now_text,
+                    importance_score,
+                    max(float(importance_score) / 2.0, 0.5),
+                ),
+            )
+            compacted_index_id = int(cursor.lastrowid)
+            placeholders = ", ".join("?" for _ in source_ids)
+            source_rows = conn.execute(
+                f"""
+                SELECT id, mem0_id
+                FROM memory_index
+                WHERE mem0_id IN ({placeholders})
+                  AND memory_type = 'episodic'
+                  AND tier = 'cold'
+                  AND status = 'trusted'
+                  AND t_invalid IS NULL
+                """,
+                source_ids,
+            ).fetchall()
+            if len(source_rows) != len(source_ids):
+                raise ValueError("cold compaction sources changed before lineage write")
+            conn.executemany(
+                """
+                UPDATE memory_index
+                SET t_invalid = ?, superseded_by = ?
+                WHERE id = ?
+                """,
+                [
+                    (now_text, compacted_mem0_id, int(row["id"]))
+                    for row in source_rows
+                ],
+            )
+            conn.executemany(
+                """
+                INSERT INTO memory_compaction_sources (
+                    compacted_memory_index_id,
+                    source_memory_index_id
+                )
+                VALUES (?, ?)
+                """,
+                [
+                    (compacted_index_id, int(row["id"]))
+                    for row in source_rows
+                ],
+            )
+        return compacted_index_id
+
+    def fetch_compaction_sources(self, compacted_mem0_id: str) -> list[str]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT source.mem0_id
+                FROM memory_compaction_sources
+                JOIN memory_index AS compacted
+                  ON compacted.id = memory_compaction_sources.compacted_memory_index_id
+                JOIN memory_index AS source
+                  ON source.id = memory_compaction_sources.source_memory_index_id
+                WHERE compacted.mem0_id = ?
+                ORDER BY source.id ASC
+                """,
+                (compacted_mem0_id,),
+            ).fetchall()
+        return [str(row["mem0_id"]) for row in rows]
 
     def policy_revision(self) -> str:
         """Return a deterministic fingerprint of retrieval-relevant shadow state."""

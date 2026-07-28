@@ -48,9 +48,22 @@ def _load_consolidation_module() -> Any:
     return module
 
 
+def _load_decay_module() -> Any:
+    """Load the sibling Phase 5 maintenance pipeline."""
+
+    path = Path(__file__).with_name("decay.py")
+    spec = importlib.util.spec_from_file_location("hermes_dual_memory.decay", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load decay module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 _storage = _load_storage_module()
 HotSessionStore = _storage.HotSessionStore
 _consolidation = _load_consolidation_module()
+_decay = _load_decay_module()
 
 
 def _estimate_token_count(content: str) -> int:
@@ -69,11 +82,13 @@ class MemoryProvider(BaseMemoryProvider):
         self._sync_lock = threading.Lock()
         self._consolidation_lock = threading.Lock()
         self._consolidation_run_lock = threading.Lock()
+        self._maintenance_threads: list[threading.Thread] = []
+        self._maintenance_lock = threading.Lock()
         self._mem0: Any = None
         self._mem0_config: dict[str, Any] | None = None
         self._llm_call: Any = None
         self._memory_user_id = "default"
-        self._prefetch_cache: dict[tuple[str, str], tuple[str, str]] = {}
+        self._prefetch_cache: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_lock = threading.Lock()
 
@@ -104,6 +119,10 @@ class MemoryProvider(BaseMemoryProvider):
         )
         self._llm_call = kwargs.get("llm_callable") or self._load_llm_callable(self._mem0_config)
         self._search_timeout = float(os.environ.get("HERMES_DUAL_MEMORY_SEARCH_TIMEOUT", "5.0"))
+        self._compaction_timeout = float(
+            os.environ.get("HERMES_DUAL_MEMORY_COMPACTION_TIMEOUT", "8.0")
+        )
+        self._queue_maintenance(trigger="initialize")
 
     @staticmethod
     def _load_llm_callable(config: dict[str, Any] | None = None) -> Any:
@@ -277,7 +296,14 @@ class MemoryProvider(BaseMemoryProvider):
             self._sync_threads.append(thread)
         thread.start()
 
-    def _search_mem0(self, query: str, *, session_id: str = "") -> str:
+    def _search_mem0(
+        self,
+        query: str,
+        *,
+        session_id: str = "",
+        record_access: bool = True,
+        visible_ids: list[str] | None = None,
+    ) -> str:
         """Search Mem0 with a hard wall-clock bound and historical delimiters."""
 
         target_session = session_id or self._session_id
@@ -328,6 +354,7 @@ class MemoryProvider(BaseMemoryProvider):
         ]
         shadow_states = self._store.retrieval_states(mem0_ids) if self._store is not None else {}
         blocks: list[str] = []
+        recalled_ids: list[str] = []
         for item in results:
             if not isinstance(item, dict):
                 continue
@@ -349,6 +376,8 @@ class MemoryProvider(BaseMemoryProvider):
             content = str(item.get("memory") or item.get("text") or "").strip()
             if not content:
                 continue
+            if mem0_id:
+                recalled_ids.append(mem0_id)
             source_session = str(metadata.get("session_id") or target_session)
             timestamp = str(item.get("updated_at") or item.get("created_at") or "unknown")
             blocks.append(
@@ -357,6 +386,10 @@ class MemoryProvider(BaseMemoryProvider):
                 f"{content}\n"
                 "</memori_lampau>"
             )
+        if visible_ids is not None:
+            visible_ids.extend(recalled_ids)
+        if record_access and self._store is not None:
+            self._store.record_accesses(recalled_ids)
         return "\n\n".join(blocks)
 
     def prefetch(self, query: str, *, session_id: str = "") -> str:
@@ -369,8 +402,9 @@ class MemoryProvider(BaseMemoryProvider):
         with self._prefetch_lock:
             cached = self._prefetch_cache.pop(key, None)
         if cached is not None and self._store is not None:
-            cached_revision, cached_result = cached
+            cached_revision, cached_result, cached_ids = cached
             if cached_revision == self._store.policy_revision():
+                self._store.record_accesses(cached_ids)
                 return cached_result
         return self._search_mem0(query, session_id=target_session)
 
@@ -386,12 +420,22 @@ class MemoryProvider(BaseMemoryProvider):
             if store is None:
                 return
             revision_before = store.policy_revision()
-            result = self._search_mem0(query, session_id=target_session)
+            recalled_ids: list[str] = []
+            result = self._search_mem0(
+                query,
+                session_id=target_session,
+                record_access=False,
+                visible_ids=recalled_ids,
+            )
             revision_after = store.policy_revision()
             if revision_before != revision_after:
                 return
             with self._prefetch_lock:
-                self._prefetch_cache[(target_session, query)] = (revision_after, result)
+                self._prefetch_cache[(target_session, query)] = (
+                    revision_after,
+                    result,
+                    tuple(recalled_ids),
+                )
 
         thread = threading.Thread(
             target=_queue,
@@ -445,15 +489,56 @@ class MemoryProvider(BaseMemoryProvider):
             logger.exception("System-2 consolidation skipped for session %s", session_id)
             return None
 
+    def _run_maintenance(self, *, trigger: str, already_claimed: bool = False) -> None:
+        store = self._store
+        if store is None:
+            return
+        try:
+            result = _decay.run_decay_cycle(
+                shadow_store=store,
+                mem0_client=self._mem0,
+                llm_call=self._llm_call,
+                user_id=self._memory_user_id,
+                already_claimed=already_claimed,
+                timeout_seconds=self._compaction_timeout,
+            )
+            if result["ran"]:
+                logger.warning(
+                    "Decay maintenance completed trigger=%s demoted=%d compacted=%d",
+                    trigger,
+                    len(result["demoted"]),
+                    len(result["compacted"]),
+                )
+        except Exception:
+            logger.exception("Decay maintenance skipped trigger=%s", trigger)
+
+    def _queue_maintenance(self, *, trigger: str) -> None:
+        store = self._store
+        if store is None or not store.claim_decay_cycle():
+            return
+        thread = threading.Thread(
+            target=self._run_maintenance,
+            kwargs={"trigger": trigger, "already_claimed": True},
+            name=f"{self.name}-maintenance-{trigger}",
+            daemon=True,
+        )
+        with self._maintenance_lock:
+            self._maintenance_threads = [t for t in self._maintenance_threads if t.is_alive()]
+            self._maintenance_threads.append(thread)
+        thread.start()
+
+    def _on_session_end_tasks(self, session_id: str) -> None:
+        self._consolidate(session_id, trigger="on_session_end")
+        self._queue_maintenance(trigger="on_session_end")
+
     def on_session_end(self, messages: List[Dict[str, Any]]) -> None:
         """Start idle consolidation in a daemon thread."""
 
         del messages
         session_id = self._session_id
         thread = threading.Thread(
-            target=self._consolidate,
+            target=self._on_session_end_tasks,
             args=(session_id,),
-            kwargs={"trigger": "on_session_end"},
             name=f"{self.name}-consolidate-{session_id}",
             daemon=True,
         )
@@ -495,6 +580,10 @@ class MemoryProvider(BaseMemoryProvider):
             self._prefetch_cache.clear()
             prefetch_threads = list(self._prefetch_threads)
         for thread in prefetch_threads:
+            thread.join(timeout=0.1)
+        with self._maintenance_lock:
+            maintenance_threads = list(self._maintenance_threads)
+        for thread in maintenance_threads:
             thread.join(timeout=0.1)
         self._store = None
 

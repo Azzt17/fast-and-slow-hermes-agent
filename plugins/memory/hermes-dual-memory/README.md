@@ -11,3 +11,9 @@ Semantic contradictions supersede old shadows through `t_invalid` rather than
 deletion. The existing `prefetch()`/`queue_prefetch()` path consults those
 shadows before returning Mem0 results. Legacy Mem0 entries without shadow rows
 remain visible for backward compatibility (ADR-0009).
+
+Phase 5 adds opportunistic episodic decay through the existing `initialize()`
+and `on_session_end()` lifecycle hooks. Retrieval updates stability and access
+history; low-retrievability episodic entries move cold, repeated access can
+promote them, and similar cold clusters are compacted by System 2 with source
+lineage preserved. Semantic entries are excluded from decay (ADR-0010).
