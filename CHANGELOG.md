@@ -2,6 +2,7 @@
 
 ## 2026-07-28
 
+- [fase-7] menutup procedural memory via Skills system: `new_skills` trusted diroute ke draft non-active dengan transisi candidate→pending/redundant, similarity gate memblokir duplikasi, approval CLI memakai validator/security writer native Hermes lalu menandai provenance agent-created untuk Curator. Sesi Hermes nyata 18 tool call menghasilkan draft, promosi `SKILL.md`, dan Curator memeriksa 69 skill tanpa error (ref ADR-0012).
 - [fase-6] menutup admission keamanan dua lapis: scanner `tools.threat_patterns` Hermes + semantic hidden-instruction review bounded, transition candidate→trusted/quarantined nyata, semantic failure fail-closed, dan quarantine diblokir oleh retrieval/compression gate existing. Korpus awal 6 known-bad/6 known-good mencapai catch `100%` dan FPR `0%` setelah tuning (ref ADR-0011).
 - [fase-5] menutup episodic decay dan cold compaction: formula `R(t)=exp(-t/S)`, promosi/demosi berbasis access window, throttle persisten 24 jam pada `initialize()`/`on_session_end()`, serta compaction Sistem 2 dengan lineage sumber tanpa delete. Semantic exclusion dan failure injection endpoint LLM tidak terjangkau PASS (ref ADR-0010).
 - [fase-4] menutup shadow index dan bi-temporal contradiction handling: setiap essence baru mendapat row `memory_index`, fakta semantic lama di-supersede melalui `t_invalid` tanpa dihapus, dan jalur retrieval Fase 3 memblokir shadow invalid/non-trusted. Skenario lintas sesi serta false-positive entity overlap PASS (ref ADR-0009).
