@@ -2,6 +2,7 @@
 
 ## 2026-07-28
 
+- [fase-5] menutup episodic decay dan cold compaction: formula `R(t)=exp(-t/S)`, promosi/demosi berbasis access window, throttle persisten 24 jam pada `initialize()`/`on_session_end()`, serta compaction Sistem 2 dengan lineage sumber tanpa delete. Semantic exclusion dan failure injection endpoint LLM tidak terjangkau PASS (ref ADR-0010).
 - [fase-4] menutup shadow index dan bi-temporal contradiction handling: setiap essence baru mendapat row `memory_index`, fakta semantic lama di-supersede melalui `t_invalid` tanpa dihapus, dan jalur retrieval Fase 3 memblokir shadow invalid/non-trusted. Skenario lintas sesi serta false-positive entity overlap PASS (ref ADR-0009).
 
 ## 2026-07-27
