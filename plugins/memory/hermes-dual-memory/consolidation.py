@@ -112,12 +112,103 @@ def parse_report(raw: Any) -> dict[str, Any]:
     return report
 
 
+def _parse_contradiction_decision(raw: Any) -> bool:
+    text = _response_text(raw).strip()
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
+    decision = json.loads(text)
+    if not isinstance(decision, dict) or not isinstance(decision.get("contradiction"), bool):
+        raise ValueError("contradiction decision must contain a boolean contradiction field")
+    return bool(decision["contradiction"])
+
+
+def find_superseded_memories(
+    *,
+    report: Mapping[str, Any],
+    llm_call: Callable[..., Any],
+    mem0_client: Any,
+    shadow_store: Any,
+) -> list[str]:
+    """Find old semantic shadows explicitly confirmed as contradictory."""
+
+    if report["memory_type"] != "semantic":
+        return []
+    if not report["entities"]:
+        return []
+    new_relations = shadow_store.normalized_claims(report["entities"], report["relations"])
+
+    superseded: list[str] = []
+    for candidate in shadow_store.find_active_semantic_candidates(report["entities"]):
+        old_relations = candidate.get("relations") or []
+        try:
+            old_memory = mem0_client.get(str(candidate["mem0_id"]))
+        except Exception:
+            logger.exception(
+                "Unable to load old memory %s for contradiction check; preserving it",
+                candidate.get("mem0_id"),
+            )
+            continue
+        old_summary = str((old_memory or {}).get("memory") or "").strip()
+        if not old_summary:
+            continue
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Tentukan apakah klaim lama dan baru benar-benar bertentangan sehingga "
+                    "keduanya tidak dapat benar pada waktu yang sama. Kemiripan topik, tambahan "
+                    "informasi, atau relasi multi-valued bukan kontradiksi. Kembalikan JSON saja: "
+                    '{"contradiction": true|false, "reason": "..."}.'
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "old_summary": old_summary,
+                        "new_summary": report["summary"],
+                        "old_claims": old_relations,
+                        "new_claims": new_relations,
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+        try:
+            response = llm_call(
+                task="memory_contradiction",
+                messages=messages,
+                temperature=0,
+                max_tokens=300,
+            )
+            if _parse_contradiction_decision(response):
+                superseded.append(str(candidate["mem0_id"]))
+        except Exception:
+            logger.exception(
+                "Contradiction check failed for old memory %s; preserving it",
+                candidate.get("mem0_id"),
+            )
+    return superseded
+
+
+def _extract_mem0_id(result: Any) -> str:
+    if not isinstance(result, dict):
+        raise ValueError("Mem0 add result must be an object")
+    results = result.get("results")
+    if not isinstance(results, list) or not results or not isinstance(results[0], dict):
+        raise ValueError("Mem0 add result did not contain results[0].id")
+    mem0_id = str(results[0].get("id") or "").strip()
+    if not mem0_id:
+        raise ValueError("Mem0 add result did not contain results[0].id")
+    return mem0_id
+
+
 def consolidate_once(
     *,
     session_id: str,
     rows: list[Mapping[str, Any]],
     llm_call: Callable[..., Any],
     mem0_client: Any,
+    shadow_store: Any,
     user_id: str = "default",
 ) -> dict[str, Any]:
     """Run one consolidation, retrying malformed model output exactly once."""
@@ -152,6 +243,7 @@ def consolidate_once(
         "session_id": session_id,
         "source": "system-2-consolidation",
         "status": "trusted",
+        "shadow_index_version": 1,
         "summary": report["summary"],
         "new_skills": json.dumps(report["new_skills"], ensure_ascii=False),
         "anomalies": json.dumps(report["anomalies"], ensure_ascii=False),
@@ -160,22 +252,39 @@ def consolidate_once(
         "memory_type": report["memory_type"],
         "importance_score": report["importance_score"],
     }
+    superseded = find_superseded_memories(
+        report=report,
+        llm_call=llm_call,
+        mem0_client=mem0_client,
+        shadow_store=shadow_store,
+    )
+    logger.warning(
+        "Mem0 add starting with infer=False session=%s metadata_fields=%s",
+        session_id,
+        ",".join(REQUIRED_FIELDS),
+    )
     try:
-        logger.warning(
-            "Mem0 add starting with infer=False session=%s metadata_fields=%s",
-            session_id,
-            ",".join(REQUIRED_FIELDS),
-        )
-        mem0_client.add(
+        add_result = mem0_client.add(
             report["summary"],
             user_id=user_id,
             metadata=metadata,
             infer=False,
         )
-        logger.warning("Mem0 add completed with infer=False session=%s", session_id)
     except TypeError as exc:
         raise RuntimeError(
             "Mem0 client must support add(..., infer=False); refusing "
             "to enable automatic extraction"
         ) from exc
+    mem0_id = _extract_mem0_id(add_result)
+    shadow_store.record_memory(
+        mem0_id=mem0_id,
+        session_id=session_id,
+        memory_type=report["memory_type"],
+        importance_score=report["importance_score"],
+        entities=report["entities"],
+        relations=report["relations"],
+        status="trusted",
+        supersedes=superseded,
+    )
+    logger.warning("Mem0 add completed with infer=False session=%s", session_id)
     return report

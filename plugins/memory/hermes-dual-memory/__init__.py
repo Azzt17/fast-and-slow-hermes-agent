@@ -73,7 +73,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._mem0_config: dict[str, Any] | None = None
         self._llm_call: Any = None
         self._memory_user_id = "default"
-        self._prefetch_cache: dict[tuple[str, str], str] = {}
+        self._prefetch_cache: dict[tuple[str, str], tuple[str, str]] = {}
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_lock = threading.Lock()
 
@@ -321,11 +321,29 @@ class MemoryProvider(BaseMemoryProvider):
         results = raw.get("results", []) if isinstance(raw, dict) else raw
         if not isinstance(results, list):
             return ""
+        mem0_ids = [
+            str(item.get("id") or "")
+            for item in results
+            if isinstance(item, dict) and item.get("id")
+        ]
+        shadow_states = self._store.retrieval_states(mem0_ids) if self._store is not None else {}
         blocks: list[str] = []
         for item in results:
             if not isinstance(item, dict):
                 continue
+            mem0_id = str(item.get("id") or "")
+            shadow_state = shadow_states.get(mem0_id)
             metadata = item.get("metadata") or {}
+            if (
+                shadow_state is None
+                and isinstance(metadata, dict)
+                and metadata.get("shadow_index_version")
+            ):
+                continue
+            if shadow_state is not None and (
+                shadow_state["status"] != "trusted" or shadow_state["t_invalid"] is not None
+            ):
+                continue
             if isinstance(metadata, dict) and metadata.get("status") not in (None, "trusted"):
                 continue
             content = str(item.get("memory") or item.get("text") or "").strip()
@@ -350,8 +368,10 @@ class MemoryProvider(BaseMemoryProvider):
         key = (target_session, query)
         with self._prefetch_lock:
             cached = self._prefetch_cache.pop(key, None)
-        if cached is not None:
-            return cached
+        if cached is not None and self._store is not None:
+            cached_revision, cached_result = cached
+            if cached_revision == self._store.policy_revision():
+                return cached_result
         return self._search_mem0(query, session_id=target_session)
 
     def queue_prefetch(self, query: str, *, session_id: str = "") -> None:
@@ -362,9 +382,16 @@ class MemoryProvider(BaseMemoryProvider):
             return
 
         def _queue() -> None:
+            store = self._store
+            if store is None:
+                return
+            revision_before = store.policy_revision()
             result = self._search_mem0(query, session_id=target_session)
+            revision_after = store.policy_revision()
+            if revision_before != revision_after:
+                return
             with self._prefetch_lock:
-                self._prefetch_cache[(target_session, query)] = result
+                self._prefetch_cache[(target_session, query)] = (revision_after, result)
 
         thread = threading.Thread(
             target=_queue,
@@ -409,6 +436,7 @@ class MemoryProvider(BaseMemoryProvider):
                 rows=rows,
                 llm_call=self._llm_call,
                 mem0_client=self._mem0,
+                shadow_store=store,
                 user_id=self._memory_user_id,
             )
             store.mark_consolidated(session_id, [int(row["id"]) for row in rows])
