@@ -12,6 +12,12 @@ deletion. The existing `prefetch()`/`queue_prefetch()` path consults those
 shadows before returning Mem0 results. Legacy Mem0 entries without shadow rows
 remain visible for backward compatibility (ADR-0009).
 
+Explicit historical queries (`before`, `previous`, `riwayat`, `sebelum`, and
+related deterministic markers) may retrieve trusted superseded semantic rows.
+Current-state queries still hide every superseded row; historical blocks carry
+their validity boundary so the model can distinguish old and current state.
+Quarantined and superseded episodic rows remain hidden (ADR-0014).
+
 Phase 5 adds opportunistic episodic decay through the existing `initialize()`
 and `on_session_end()` lifecycle hooks. Retrieval updates stability and access
 history; low-retrievability episodic entries move cold, repeated access can

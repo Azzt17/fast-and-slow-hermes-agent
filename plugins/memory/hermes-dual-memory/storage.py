@@ -600,7 +600,7 @@ class HotSessionStore:
         with self.connect() as conn:
             rows = conn.execute(
                 f"""
-                SELECT mem0_id, status, t_invalid
+                SELECT mem0_id, memory_type, status, t_valid, t_invalid
                 FROM memory_index
                 WHERE mem0_id IN ({placeholders})
                 """,
@@ -608,7 +608,9 @@ class HotSessionStore:
             ).fetchall()
         return {
             str(row["mem0_id"]): {
+                "memory_type": str(row["memory_type"] or ""),
                 "status": str(row["status"]),
+                "t_valid": row["t_valid"],
                 "t_invalid": row["t_invalid"],
             }
             for row in rows
@@ -619,6 +621,7 @@ class HotSessionStore:
         mem0_ids: Sequence[str],
         *,
         accessed_at: datetime | None = None,
+        include_invalid: bool = False,
     ) -> dict[str, str]:
         """Record visible retrievals and promote eligible cold episodic rows."""
 
@@ -629,6 +632,11 @@ class HotSessionStore:
         now_text = db_timestamp(now)
         window_start = db_timestamp(now - timedelta(days=7))
         placeholders = ", ".join("?" for _ in unique_ids)
+        validity_clause = (
+            "AND (t_invalid IS NULL OR memory_type = 'semantic')"
+            if include_invalid
+            else "AND t_invalid IS NULL"
+        )
         promoted: dict[str, str] = {}
         with self.connect() as conn:
             rows = conn.execute(
@@ -637,7 +645,7 @@ class HotSessionStore:
                 FROM memory_index
                 WHERE mem0_id IN ({placeholders})
                   AND status = 'trusted'
-                  AND t_invalid IS NULL
+                  {validity_clause}
                 """,
                 unique_ids,
             ).fetchall()

@@ -40,10 +40,11 @@ token efficiency pada jalur retrieval real-stack untuk tujuh kategori.
 ## Hasil Uji
 
 Suite, review, dan seluruh pengukuran selesai; baseline overall `PARTIAL`. Pada
-20 query, Memory Recall `90%`, Precision@5 `24%`, latency p50/p95
-`160.953/223.123 ms`, dan mean
-context `119.1` token/query. Temporal reasoning `PARTIAL` (`50% recall`) dan
-abstention `PARTIAL` (`50%`) dicatat tanpa dipaksa lolos. Laporan lengkap:
+20 query, Memory Recall `100%`, Precision@5 `26.67%`, latency p50/p95
+`181.308/257.504 ms`, dan mean context `139.5` token/query. Follow-up
+ADR-0014 menaikkan temporal reasoning dari `PARTIAL` (`50% recall`) menjadi
+`PASS` (`100%`) tanpa membocorkan old-state ke current-state query. Abstention
+tetap `PARTIAL` (`50%`) apa adanya. Laporan lengkap:
 `docs/testing/results/phase-8-results.md`.
 
 ## Catatan/Pembelajaran
@@ -60,3 +61,8 @@ Score expected facts minimum `0.567921`, sedangkan abstention top score
 `0.598476/0.530859`. Threshold seimbang `0.55` meningkatkan abstention dari 0%
 ke 50% tanpa menurunkan recall kategori lain. Threshold 0.60 ditolak karena akan
 memotong beberapa expected facts multi-session.
+
+Follow-up baseline menunjukkan row superseded semantic memang masih diranking
+raw Mem0. Mode historis deterministik kini membuka row tersebut hanya untuk
+query dengan intent temporal eksplisit, memberi atribut validity boundary, dan
+tetap memblok quarantine serta superseded episodic (ref ADR-0014).

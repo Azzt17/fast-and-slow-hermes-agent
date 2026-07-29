@@ -29,6 +29,22 @@ class SearchMem0:
         return self.result
 
 class RetrievalTest(unittest.TestCase):
+    def test_historical_intent_detection_is_deterministic_and_conservative(self):
+        module = load_provider_module()
+        for query in (
+            "What did Project Nova use before migration?",
+            "Describe the previous vector-store sequence.",
+            "Apa yang dipakai sebelum migrasi?",
+            "Jelaskan riwayat penyimpanannya.",
+        ):
+            self.assertTrue(module._requests_historical_memory(query), query)
+        for query in (
+            "What does Project Nova use now?",
+            "What does Project Nova use after migration?",
+            "Apa penyimpanan yang dipakai sekarang?",
+        ):
+            self.assertFalse(module._requests_historical_memory(query), query)
+
     def test_prefetch_wraps_results_in_historical_delimiter(self):
         mem0 = SearchMem0({"results": [{
             "memory": "Keputusan memakai SQLite sebagai shadow index.",
@@ -158,6 +174,124 @@ class RetrievalTest(unittest.TestCase):
                 llm_callable=lambda **_: "",
             )
             self.assertEqual(provider.prefetch("moderate"), "")
+            provider.shutdown()
+
+    def test_historical_query_exposes_only_trusted_superseded_semantic_rows(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "id": "memory-old",
+                        "memory": "Project Nova used Chroma before migration.",
+                        "metadata": {
+                            "session_id": "session-old",
+                            "status": "trusted",
+                            "shadow_index_version": 1,
+                        },
+                    },
+                    {
+                        "id": "memory-new",
+                        "memory": "Project Nova uses Qdrant after migration.",
+                        "metadata": {
+                            "session_id": "session-new",
+                            "status": "trusted",
+                            "shadow_index_version": 1,
+                        },
+                    },
+                    {
+                        "id": "memory-episodic-old",
+                        "memory": "Superseded episodic event.",
+                        "metadata": {
+                            "session_id": "session-event",
+                            "status": "trusted",
+                            "shadow_index_version": 1,
+                        },
+                    },
+                    {
+                        "id": "memory-quarantined",
+                        "memory": "Untrusted historical claim.",
+                        "metadata": {
+                            "session_id": "session-bad",
+                            "status": "trusted",
+                            "shadow_index_version": 1,
+                        },
+                    },
+                ]
+            }
+        )
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-current",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=lambda **_: "",
+            )
+            provider._store.record_memory(
+                mem0_id="memory-old",
+                session_id="session-old",
+                memory_type="semantic",
+                importance_score=8,
+                entities=[],
+                relations=[],
+            )
+            provider._store.record_memory(
+                mem0_id="memory-new",
+                session_id="session-new",
+                memory_type="semantic",
+                importance_score=8,
+                entities=[],
+                relations=[],
+                supersedes=["memory-old"],
+            )
+            provider._store.record_memory(
+                mem0_id="memory-episodic-old",
+                session_id="session-event",
+                memory_type="episodic",
+                importance_score=5,
+                entities=[],
+                relations=[],
+            )
+            with provider._store.connect() as conn:
+                conn.execute(
+                    "UPDATE memory_index SET t_invalid = CURRENT_TIMESTAMP "
+                    "WHERE mem0_id = ?",
+                    ("memory-episodic-old",),
+                )
+            provider._store.record_memory(
+                mem0_id="memory-quarantined",
+                session_id="session-bad",
+                memory_type="semantic",
+                importance_score=8,
+                entities=[],
+                relations=[],
+                status="quarantined",
+            )
+
+            historical = provider.prefetch(
+                "Which vector store did Project Nova use before migration?"
+            )
+            self.assertIn("Project Nova used Chroma", historical)
+            self.assertIn('keadaan_temporal="superseded"', historical)
+            self.assertIn("Project Nova uses Qdrant", historical)
+            self.assertIn('keadaan_temporal="current"', historical)
+            self.assertNotIn("Superseded episodic event", historical)
+            self.assertNotIn("Untrusted historical claim", historical)
+
+            current = provider.prefetch(
+                "Which vector store does Project Nova use after migration?"
+            )
+            self.assertNotIn("Project Nova used Chroma", current)
+            self.assertIn("Project Nova uses Qdrant", current)
+
+            rows = {
+                row["mem0_id"]: row for row in provider._store.fetch_memory_index()
+            }
+            self.assertEqual(rows["memory-old"]["access_count"], 1)
+            self.assertEqual(rows["memory-new"]["access_count"], 2)
+            self.assertEqual(rows["memory-episodic-old"]["access_count"], 0)
+            self.assertEqual(rows["memory-quarantined"]["access_count"], 0)
             provider.shutdown()
 
     def test_empty_search_is_clean(self):

@@ -107,7 +107,7 @@ class Phase8EvaluationTest(unittest.TestCase):
         self.assertEqual(security["status"], "PASS")
         self.assertEqual(security["forbidden_raw_fixture_ids"], ["quarantined"])
 
-    def test_temporal_partial_summary_records_architecture_gap(self):
+    def test_temporal_partial_summary_records_remaining_retrieval_gap(self):
         query_results = [
             {
                 "status": "PARTIAL",
@@ -121,7 +121,7 @@ class Phase8EvaluationTest(unittest.TestCase):
         result = category_summary("temporal_reasoning", query_results, 5)
         self.assertEqual(result["verdict"], "PARTIAL")
         self.assertIn(
-            "normal retrieval hides superseded rows; historical before-state lookup is not implemented",
+            "historical intent mode ran but expected temporal facts remained incomplete",
             result["reasons"],
         )
         self.assertEqual(result["latency_ms"]["p50"], 100.0)

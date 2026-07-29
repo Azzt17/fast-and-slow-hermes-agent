@@ -74,8 +74,10 @@ menurunkan recall multi-session.
 Ambang default dipilih konservatif `0.55`, tepat di bawah minimum expected score.
 Hasil khusus abstention membaik dari `0/2` menjadi `1/2` (`50%`): passport
 berhasil kosong (top score `0.530859`), constellation masih menyuntik satu memory
-(top score `0.598476`). Aggregate recall tetap `90%`; semua verdict kategori lain
-tidak turun. Ambang dapat dituning dengan `HERMES_DUAL_MEMORY_MIN_SCORE`.
+(top score `0.598476`). Pada baseline awal sebelum ADR-0014, aggregate recall
+tetap `90%`; semua verdict kategori lain tidak turun. Follow-up temporal kemudian
+menaikkan aggregate recall menjadi `100%` tanpa mengubah threshold. Ambang dapat
+dituning dengan `HERMES_DUAL_MEMORY_MIN_SCORE`.
 
 ## Metrik Aggregate
 
@@ -84,16 +86,16 @@ Overall verdict:              PARTIAL
 Queries:                      20
 Answerable queries:           15
 Expected fact occurrences:   20
-Recalled fact occurrences:   18
-Memory Recall:                90.00%
-Memory Precision@5:           24.00%
-Latency p50:                  160.953 ms
-Latency p95:                  223.123 ms
-Latency mean:                 174.841 ms
-Token total injected:         2,382
-Token mean/query:             119.1
+Recalled fact occurrences:   20
+Memory Recall:                100.00%
+Memory Precision@5:           26.67%
+Latency p50:                  181.308 ms
+Latency p95:                  257.504 ms
+Latency mean:                 180.804 ms
+Token total injected:         2,790
+Token mean/query:             139.5
 Token p50/query:              81
-Token p95/query:              334
+Token p95/query:              368
 Abstention accuracy:          50.00%
 Security exclusion rate:      100.00%
 ```
@@ -106,26 +108,28 @@ denominator recall/precision aggregate.
 
 | Kategori | Verdict | Recall | Precision@5 | Latency p50/p95 | Mean token |
 |---|---|---:|---:|---:|---:|
-| Single-session recall | PASS | 100% | 20.00% | 181.074 / 205.886 ms | 108.0 |
-| Multi-session aggregation | PASS | 100% | 46.67% | 223.123 / 248.859 ms | 334.333 |
-| Knowledge update | PASS | 100% | 20.00% | 187.989 / 199.291 ms | 80.0 |
-| Temporal reasoning | PARTIAL | 50% | 13.33% | 187.685 / 213.642 ms | 164.0 |
-| Abstention | PARTIAL | n/a | n/a | 152.656 / 154.728 ms | 40.5 |
-| Cross-tier recall | PASS | 100% | 20.00% | 154.602 / 160.953 ms | 80.667 |
-| Security exclusion | PASS | n/a | n/a | 142.908 / 151.278 ms | 0.0 |
+| Single-session recall | PASS | 100% | 20.00% | 181.308 / 257.504 ms | 108.0 |
+| Multi-session aggregation | PASS | 100% | 46.67% | 212.640 / 300.228 ms | 334.333 |
+| Knowledge update | PASS | 100% | 20.00% | 182.013 / 182.103 ms | 80.0 |
+| Temporal reasoning | PASS | 100% | 26.67% | 182.051 / 185.340 ms | 300.0 |
+| Abstention | PARTIAL | n/a | n/a | 147.061 / 154.388 ms | 40.5 |
+| Cross-tier recall | PASS | 100% | 20.00% | 189.593 / 197.310 ms | 80.667 |
+| Security exclusion | PASS | n/a | n/a | 154.384 / 154.865 ms | 0.0 |
 
 ## Kategori Lemah Apa Adanya
 
-### Temporal Reasoning — PARTIAL
+### Temporal Reasoning — PASS (Follow-up ADR-0014)
 
-- Pertanyaan state **setelah** migrasi PASS.
-- Pertanyaan state **sebelum** migrasi FAIL.
-- Pertanyaan urutan sebelum+sesudah hanya menemukan state baru (`1/2`).
+- Pertanyaan state **sebelum** migrasi menemukan old-state trusted.
+- Pertanyaan state **setelah** migrasi tetap menyembunyikan old-state.
+- Pertanyaan urutan sebelum+sesudah menemukan kedua state (`2/2`).
 
-Alasannya struktural: retrieval normal sengaja menyembunyikan row superseded
-dengan `t_invalid`, sesuai policy Fase 4. Shadow index menyimpan history, tetapi
-belum ada query mode historis yang boleh membaca before-state secara eksplisit.
-Suite tidak membypass gate untuk memaksa PASS.
+Provider kini mendeteksi intent historis dengan marker lexical deterministik.
+Hanya row superseded `semantic` berstatus `trusted` yang boleh melewati gate;
+blok diberi `keadaan_temporal`, `berlaku_mulai`, dan `berlaku_sampai`. Query
+current-state, quarantine, orphan bertanda shadow, dan invalid episodic tetap
+diblok. Recall temporal naik `50%` → `100%`; token temporal mean naik karena
+before+current state sengaja masuk bersama pada query historis.
 
 ### Abstention — PARTIAL
 
@@ -151,7 +155,7 @@ leak `0/3`, exclusion rate `100%`.
 
 ```text
 .venv/bin/python -m unittest discover -s tests -v
-Ran 53 tests
+Ran 55 tests
 OK (skipped=2)
 
 Hermes runtime integration:

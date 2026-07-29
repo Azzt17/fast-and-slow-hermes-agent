@@ -5,28 +5,28 @@
     "expected_fact_occurrences": 20,
     "latency_ms": {
       "count": 20,
-      "max": 248.859,
-      "mean": 174.841,
-      "min": 85.886,
-      "p50": 160.953,
-      "p95": 223.123
+      "max": 300.228,
+      "mean": 180.804,
+      "min": 85.404,
+      "p50": 181.308,
+      "p95": 257.504
     },
-    "memory_precision_at_k": 0.24,
-    "memory_recall": 0.9,
+    "memory_precision_at_k": 0.266667,
+    "memory_recall": 1.0,
     "query_count": 20,
-    "recalled_fact_occurrences": 18,
+    "recalled_fact_occurrences": 20,
     "security_exclusion_rate": 1.0,
     "token_efficiency": {
       "measured_query_count": 20,
       "per_query": {
         "count": 20,
-        "max": 335.0,
-        "mean": 119.1,
+        "max": 368.0,
+        "mean": 139.5,
         "min": 0.0,
         "p50": 81.0,
-        "p95": 334.0
+        "p95": 368.0
       },
-      "total_injected_tokens": 2382
+      "total_injected_tokens": 2790
     },
     "top_k": 5
   },
@@ -44,11 +44,11 @@
       "expected_fact_occurrences": 3,
       "latency_ms": {
         "count": 3,
-        "max": 205.886,
-        "mean": 189.309,
-        "min": 180.966,
-        "p50": 181.074,
-        "p95": 205.886
+        "max": 257.504,
+        "mean": 204.711,
+        "min": 175.321,
+        "p50": 181.308,
+        "p95": 257.504
       },
       "memory_precision_at_k": 0.2,
       "memory_recall": 1.0,
@@ -77,11 +77,11 @@
       "expected_fact_occurrences": 7,
       "latency_ms": {
         "count": 3,
-        "max": 248.859,
-        "mean": 222.472,
-        "min": 195.433,
-        "p50": 223.123,
-        "p95": 248.859
+        "max": 300.228,
+        "mean": 236.589,
+        "min": 196.898,
+        "p50": 212.64,
+        "p95": 300.228
       },
       "memory_precision_at_k": 0.466667,
       "memory_recall": 1.0,
@@ -110,11 +110,11 @@
       "expected_fact_occurrences": 3,
       "latency_ms": {
         "count": 3,
-        "max": 199.291,
-        "mean": 181.485,
-        "min": 157.176,
-        "p50": 187.989,
-        "p95": 199.291
+        "max": 182.103,
+        "mean": 173.325,
+        "min": 155.858,
+        "p50": 182.013,
+        "p95": 182.103
       },
       "memory_precision_at_k": 0.2,
       "memory_recall": 1.0,
@@ -134,36 +134,34 @@
       "category": "temporal_reasoning",
       "context_tokens": {
         "count": 3,
-        "max": 164.0,
-        "mean": 164.0,
+        "max": 368.0,
+        "mean": 300.0,
         "min": 164.0,
-        "p50": 164.0,
-        "p95": 164.0
+        "p50": 368.0,
+        "p95": 368.0
       },
       "expected_fact_occurrences": 4,
       "latency_ms": {
         "count": 3,
-        "max": 213.642,
-        "mean": 186.484,
-        "min": 158.125,
-        "p50": 187.685,
-        "p95": 213.642
+        "max": 185.34,
+        "mean": 175.282,
+        "min": 158.456,
+        "p50": 182.051,
+        "p95": 185.34
       },
-      "memory_precision_at_k": 0.133333,
-      "memory_recall": 0.5,
+      "memory_precision_at_k": 0.266667,
+      "memory_recall": 1.0,
       "query_count": 3,
       "query_status_counts": {
-        "FAIL": 1,
-        "PARTIAL": 1,
-        "PASS": 1
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
       },
       "reasons": [
-        "found 1 of 2 expected facts",
-        "none of the expected facts reached visible context",
-        "normal retrieval hides superseded rows; historical before-state lookup is not implemented"
+        "all category expectations passed"
       ],
-      "recalled_fact_occurrences": 2,
-      "verdict": "PARTIAL"
+      "recalled_fact_occurrences": 4,
+      "verdict": "PASS"
     },
     {
       "category": "abstention",
@@ -178,11 +176,11 @@
       "expected_fact_occurrences": 0,
       "latency_ms": {
         "count": 2,
-        "max": 154.728,
-        "mean": 153.692,
-        "min": 152.656,
-        "p50": 152.656,
-        "p95": 154.728
+        "max": 154.388,
+        "mean": 150.725,
+        "min": 147.061,
+        "p50": 147.061,
+        "p95": 154.388
       },
       "memory_precision_at_k": null,
       "memory_recall": null,
@@ -212,11 +210,11 @@
       "expected_fact_occurrences": 3,
       "latency_ms": {
         "count": 3,
-        "max": 160.953,
-        "mean": 156.706,
-        "min": 154.562,
-        "p50": 154.602,
-        "p95": 160.953
+        "max": 197.31,
+        "mean": 183.422,
+        "min": 163.364,
+        "p50": 189.593,
+        "p95": 197.31
       },
       "memory_precision_at_k": 0.2,
       "memory_recall": 1.0,
@@ -245,11 +243,11 @@
       "expected_fact_occurrences": 0,
       "latency_ms": {
         "count": 3,
-        "max": 151.278,
-        "mean": 126.691,
-        "min": 85.886,
-        "p50": 142.908,
-        "p95": 151.278
+        "max": 154.865,
+        "mean": 131.551,
+        "min": 85.404,
+        "p50": 154.384,
+        "p95": 154.865
       },
       "memory_precision_at_k": null,
       "memory_recall": null,
@@ -285,8 +283,9 @@
     "quarantined_count": 3,
     "trusted_count": 13
   },
-  "generated_at": "2026-07-29T00:37:23.843909+00:00",
+  "generated_at": "2026-07-29T01:39:42.990877+00:00",
   "instrumentation": {
+    "historical_query_mode": "deterministic lexical intent; trusted superseded semantic rows only",
     "latency": "time.perf_counter around MemoryProvider.prefetch (Phase 3 boundary)",
     "precision": "relevant visible results / fixed top_k (5); no-answer categories excluded",
     "retrieval_min_score": 0.55,
@@ -305,7 +304,7 @@
     {
       "category": "single_session_recall",
       "context_chars": 417,
-      "context_sha256": "879b71018c54fb76b472c2a13c1cb7e5029ebb7a60e88bc7d0f309f77a984732",
+      "context_sha256": "e5f952b93e3f84a69c78ff11d612b924fdce287955802c922c6625fb64c7f3e6",
       "context_tokens": 165,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -315,7 +314,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "single-color",
-      "latency_ms": 180.966,
+      "latency_ms": 181.308,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "What launch color did Project Atlas select?",
@@ -329,27 +328,27 @@
       "raw_results": [
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.79886
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.568296
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.528428
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.506414
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.502317
         }
       ],
@@ -369,7 +368,7 @@
     {
       "category": "single_session_recall",
       "context_chars": 200,
-      "context_sha256": "8fca83dadd30a3a3dfe085ed79b99135de2d0106521e3f3263a3a7dc18e0fc22",
+      "context_sha256": "4b3da7c28af96d32cbcf2ea8016ad348f2529f10eb83a1fa6532ea9bde6bafc2",
       "context_tokens": 81,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -379,7 +378,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "single-coffee",
-      "latency_ms": 181.074,
+      "latency_ms": 175.321,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Which coffee does Farid prefer during morning work?",
@@ -393,27 +392,27 @@
       "raw_results": [
         {
           "fixture_id": "single-coffee",
-          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "mem0_id": "4c2c2d9a-9e19-4c4b-a53b-07692115c219",
           "score": 0.850527
         },
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.472309
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.45377
         },
         {
           "fixture_id": "zenith-region-old",
-          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "mem0_id": "ab0b8104-b3e3-48fa-8e32-fd06826ebaef",
           "score": 0.44997
         },
         {
           "fixture_id": "single-editor",
-          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "mem0_id": "57726f7f-ff8f-43d0-a0fc-0d4484dee26e",
           "score": 0.449723
         }
       ],
@@ -432,7 +431,7 @@
     {
       "category": "single_session_recall",
       "context_chars": 194,
-      "context_sha256": "47c0475fbd861e5587fea6cd0dc4415813807ca3b4cc1ae02fe1325374b42872",
+      "context_sha256": "e34f6660b2295547fcf0a9ef397b8cd63f20921edb7c0abf5afb8a2034e540d8",
       "context_tokens": 78,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -442,7 +441,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "single-editor",
-      "latency_ms": 205.886,
+      "latency_ms": 257.504,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "What is the preferred Markdown editor?",
@@ -456,27 +455,27 @@
       "raw_results": [
         {
           "fixture_id": "single-editor",
-          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "mem0_id": "57726f7f-ff8f-43d0-a0fc-0d4484dee26e",
           "score": 0.774632
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.49944
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.483559
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.476834
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.473843
         }
       ],
@@ -495,7 +494,7 @@
     {
       "category": "multi_session_aggregation",
       "context_chars": 822,
-      "context_sha256": "d45d678f585a5456adec7436c7519ce63d89e3fdc35872c8e6f16aa2a92a4092",
+      "context_sha256": "e398b1df32b4189e824c599d2d95613fdf9808b0cf881ecd28a34a38be764d81",
       "context_tokens": 335,
       "expected_count": 3,
       "expected_fixture_ids": [
@@ -507,7 +506,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "multi-all-orion",
-      "latency_ms": 248.859,
+      "latency_ms": 300.228,
       "missing_fixture_ids": [],
       "precision_at_k": 0.6,
       "query": "List all recorded storage and embedding decisions for Project Orion.",
@@ -521,27 +520,27 @@
       "raw_results": [
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.595779
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.590208
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.567921
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.558429
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.536671
         }
       ],
@@ -565,7 +564,7 @@
     {
       "category": "multi_session_aggregation",
       "context_chars": 814,
-      "context_sha256": "172d553f2947171edf997b6a241954e2332d10f402056c846eb98b5f1e4c2267",
+      "context_sha256": "ef155dbe7ed36698fe49e0dd4e5adfb2594be847021ca99eb6159de32eb4cbed",
       "context_tokens": 334,
       "expected_count": 2,
       "expected_fixture_ids": [
@@ -576,7 +575,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "multi-orion-storage",
-      "latency_ms": 223.123,
+      "latency_ms": 212.64,
       "missing_fixture_ids": [],
       "precision_at_k": 0.4,
       "query": "Which databases does Project Orion use for its shadow index and vectors?",
@@ -590,27 +589,27 @@
       "raw_results": [
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.776953
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.652352
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.615512
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.60287
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.591341
         }
       ],
@@ -633,7 +632,7 @@
     {
       "category": "multi_session_aggregation",
       "context_chars": 814,
-      "context_sha256": "3e44884b49faf65a7697d2864ae835c33323e003ffba6b4abb8b420b913543af",
+      "context_sha256": "6bd3b2e23fb70160deb0b41758aa65cde98b2dbdd2e37bf594d7fb8cec28badd",
       "context_tokens": 334,
       "expected_count": 2,
       "expected_fixture_ids": [
@@ -644,7 +643,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "multi-orion-embedding",
-      "latency_ms": 195.433,
+      "latency_ms": 196.898,
       "missing_fixture_ids": [],
       "precision_at_k": 0.4,
       "query": "What are Project Orion's vector store and embedding model decisions?",
@@ -658,27 +657,27 @@
       "raw_results": [
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.651299
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.606304
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.59772
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.582526
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.550497
         }
       ],
@@ -701,7 +700,7 @@
     {
       "category": "knowledge_update",
       "context_chars": 196,
-      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_sha256": "cffdc2081cba1db7b286b1a1d6864aa9dd7349b43cf8fbd7baff2d1416fe23b6",
       "context_tokens": 80,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -713,7 +712,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "update-zenith-latest",
-      "latency_ms": 199.291,
+      "latency_ms": 182.103,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "What is the latest deployment region for Project Zenith?",
@@ -727,27 +726,27 @@
       "raw_results": [
         {
           "fixture_id": "zenith-region-new",
-          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "mem0_id": "081229e4-0a47-4978-9841-328fe07ad218",
           "score": 0.762379
         },
         {
           "fixture_id": "zenith-region-old",
-          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "mem0_id": "ab0b8104-b3e3-48fa-8e32-fd06826ebaef",
           "score": 0.736244
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.533421
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.528823
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.526813
         }
       ],
@@ -766,7 +765,7 @@
     {
       "category": "knowledge_update",
       "context_chars": 196,
-      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_sha256": "cffdc2081cba1db7b286b1a1d6864aa9dd7349b43cf8fbd7baff2d1416fe23b6",
       "context_tokens": 80,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -778,7 +777,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "update-zenith-current",
-      "latency_ms": 157.176,
+      "latency_ms": 155.858,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Where does Project Zenith deploy now?",
@@ -792,27 +791,27 @@
       "raw_results": [
         {
           "fixture_id": "zenith-region-new",
-          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "mem0_id": "081229e4-0a47-4978-9841-328fe07ad218",
           "score": 0.734311
         },
         {
           "fixture_id": "zenith-region-old",
-          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "mem0_id": "ab0b8104-b3e3-48fa-8e32-fd06826ebaef",
           "score": 0.683823
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.522358
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.519959
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.513733
         }
       ],
@@ -831,7 +830,7 @@
     {
       "category": "knowledge_update",
       "context_chars": 196,
-      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_sha256": "cffdc2081cba1db7b286b1a1d6864aa9dd7349b43cf8fbd7baff2d1416fe23b6",
       "context_tokens": 80,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -843,7 +842,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "update-zenith-region",
-      "latency_ms": 187.989,
+      "latency_ms": 182.013,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Give the current Project Zenith region decision.",
@@ -857,27 +856,27 @@
       "raw_results": [
         {
           "fixture_id": "zenith-region-new",
-          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "mem0_id": "081229e4-0a47-4978-9841-328fe07ad218",
           "score": 0.690906
         },
         {
           "fixture_id": "zenith-region-old",
-          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "mem0_id": "ab0b8104-b3e3-48fa-8e32-fd06826ebaef",
           "score": 0.673369
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.519709
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.50492
         },
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.504248
         }
       ],
@@ -895,9 +894,9 @@
     },
     {
       "category": "temporal_reasoning",
-      "context_chars": 403,
-      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
-      "context_tokens": 164,
+      "context_chars": 846,
+      "context_sha256": "be590867394dc464f63931533513866888d5ec9929d37b687058a38a886ed413",
+      "context_tokens": 368,
       "expected_count": 1,
       "expected_fixture_ids": [
         "nova-store-old"
@@ -906,11 +905,9 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "temporal-before-nova",
-      "latency_ms": 213.642,
-      "missing_fixture_ids": [
-        "nova-store-old"
-      ],
-      "precision_at_k": 0.0,
+      "latency_ms": 185.34,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
       "query": "Which vector store did Project Nova use before the migration?",
       "raw_fixture_ids": [
         "nova-store-old",
@@ -922,37 +919,40 @@
       "raw_results": [
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.79538
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.743992
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.562726
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.525722
         },
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.509839
         }
       ],
-      "reason": "none of the expected facts reached visible context",
-      "recall": 0.0,
-      "recalled_count": 0,
-      "relevant_fixture_ids": [],
-      "returned_precision": 0.0,
-      "status": "FAIL",
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "nova-store-old"
+      ],
+      "returned_precision": 0.333333,
+      "status": "PASS",
       "visible_fixture_ids": [
+        "nova-store-old",
         "nova-store-new",
         "orion-vector"
       ]
@@ -960,7 +960,7 @@
     {
       "category": "temporal_reasoning",
       "context_chars": 403,
-      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
+      "context_sha256": "0486d11b1f6599c819bf4f4655e71e9d8c5b107201c59271db1ca96c427a4769",
       "context_tokens": 164,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -972,7 +972,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "temporal-after-nova",
-      "latency_ms": 187.685,
+      "latency_ms": 182.051,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Which vector store does Project Nova use after the migration?",
@@ -986,27 +986,27 @@
       "raw_results": [
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.765125
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.745358
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.559828
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.5197
         },
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.498468
         }
       ],
@@ -1025,9 +1025,9 @@
     },
     {
       "category": "temporal_reasoning",
-      "context_chars": 403,
-      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
-      "context_tokens": 164,
+      "context_chars": 846,
+      "context_sha256": "c842a4d588e6f9b03b2bcf7f96b1b60f2df22a08bb889beefe86c7f30ba11847",
+      "context_tokens": 368,
       "expected_count": 2,
       "expected_fixture_ids": [
         "nova-store-old",
@@ -1037,11 +1037,9 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "temporal-sequence-nova",
-      "latency_ms": 158.125,
-      "missing_fixture_ids": [
-        "nova-store-old"
-      ],
-      "precision_at_k": 0.2,
+      "latency_ms": 158.456,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.4,
       "query": "Describe Project Nova's vector-store sequence before and after migration.",
       "raw_fixture_ids": [
         "nova-store-new",
@@ -1053,47 +1051,49 @@
       "raw_results": [
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.731825
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.719843
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.569599
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.524501
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.520763
         }
       ],
-      "reason": "found 1 of 2 expected facts",
-      "recall": 0.5,
-      "recalled_count": 1,
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 2,
       "relevant_fixture_ids": [
-        "nova-store-new"
+        "nova-store-new",
+        "nova-store-old"
       ],
-      "returned_precision": 0.5,
-      "status": "PARTIAL",
+      "returned_precision": 0.666667,
+      "status": "PASS",
       "visible_fixture_ids": [
         "nova-store-new",
+        "nova-store-old",
         "orion-vector"
       ]
     },
     {
       "category": "abstention",
       "context_chars": 200,
-      "context_sha256": "8fca83dadd30a3a3dfe085ed79b99135de2d0106521e3f3263a3a7dc18e0fc22",
+      "context_sha256": "4b3da7c28af96d32cbcf2ea8016ad348f2529f10eb83a1fa6532ea9bde6bafc2",
       "context_tokens": 81,
       "expected_count": 0,
       "expected_fixture_ids": [],
@@ -1101,7 +1101,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "abstention-constellation",
-      "latency_ms": 152.656,
+      "latency_ms": 154.388,
       "missing_fixture_ids": [],
       "precision_at_k": null,
       "query": "What is Farid's favorite constellation?",
@@ -1115,27 +1115,27 @@
       "raw_results": [
         {
           "fixture_id": "single-coffee",
-          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "mem0_id": "4c2c2d9a-9e19-4c4b-a53b-07692115c219",
           "score": 0.598476
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.490108
         },
         {
           "fixture_id": "single-atlas-color",
-          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "mem0_id": "ea40232e-1071-4482-a421-e125fad9fb49",
           "score": 0.487296
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.484562
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.482532
         }
       ],
@@ -1160,7 +1160,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "abstention-passport",
-      "latency_ms": 154.728,
+      "latency_ms": 147.061,
       "missing_fixture_ids": [],
       "precision_at_k": null,
       "query": "When does Farid's passport expire?",
@@ -1174,27 +1174,27 @@
       "raw_results": [
         {
           "fixture_id": "single-coffee",
-          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "mem0_id": "4c2c2d9a-9e19-4c4b-a53b-07692115c219",
           "score": 0.530859
         },
         {
           "fixture_id": "quarantine-exfiltration",
-          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "mem0_id": "58bb5435-fa28-4ec7-b08a-e2215ab766e6",
           "score": 0.489555
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.480936
         },
         {
           "fixture_id": "quarantine-persistence",
-          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "mem0_id": "eaa736f3-26ee-40d4-97ab-828c63dccc80",
           "score": 0.477062
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.462355
         }
       ],
@@ -1209,7 +1209,7 @@
     {
       "category": "cross_tier_recall",
       "context_chars": 217,
-      "context_sha256": "71d6e45e80916535aac7644c280767ca2744fc20517fa77d61daf1e57995281c",
+      "context_sha256": "1f238f7f6930ab44a12851fa3254677530c6841c4698cf0da305941409ebbd53",
       "context_tokens": 84,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -1221,7 +1221,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "cold-backup",
-      "latency_ms": 154.602,
+      "latency_ms": 163.364,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Where are quarterly archive backups stored?",
@@ -1235,27 +1235,27 @@
       "raw_results": [
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.761365
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.536947
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.506531
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.498742
         },
         {
           "fixture_id": "orion-shadow",
-          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "mem0_id": "a5150e9e-2876-4f81-9a76-5b06f8d6efbe",
           "score": 0.478552
         }
       ],
@@ -1274,7 +1274,7 @@
     {
       "category": "cross_tier_recall",
       "context_chars": 196,
-      "context_sha256": "6effe5c76ede6102f831e6c4077d680b2a991fd20e6d353ed8676f77ad5b9235",
+      "context_sha256": "a8d4a89021d698f88f852d37a25ab3f3d9a056da0e4650cb97bcb681ebc974d5",
       "context_tokens": 81,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -1286,7 +1286,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "cold-incident",
-      "latency_ms": 160.953,
+      "latency_ms": 197.31,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "Which template is used for incident reviews?",
@@ -1300,27 +1300,27 @@
       "raw_results": [
         {
           "fixture_id": "cold-incident",
-          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "mem0_id": "318df288-0a10-4606-8cd8-4e3d86fd38d2",
           "score": 0.716264
         },
         {
           "fixture_id": "cold-checksum",
-          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "mem0_id": "1f944a2b-20d8-41eb-907c-968ecb45bf06",
           "score": 0.496517
         },
         {
           "fixture_id": "quarantine-exfiltration",
-          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "mem0_id": "58bb5435-fa28-4ec7-b08a-e2215ab766e6",
           "score": 0.487045
         },
         {
           "fixture_id": "single-editor",
-          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "mem0_id": "57726f7f-ff8f-43d0-a0fc-0d4484dee26e",
           "score": 0.485956
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.480311
         }
       ],
@@ -1339,7 +1339,7 @@
     {
       "category": "cross_tier_recall",
       "context_chars": 201,
-      "context_sha256": "892ea918d13ef508a23ab3d10698f36ff943dc86aa6b71af8962035e3fbc636c",
+      "context_sha256": "5d9abe85f7974fb2a20b33f79890500789f3d617579823e9c099e9c0b2b7a549",
       "context_tokens": 77,
       "expected_count": 1,
       "expected_fixture_ids": [
@@ -1351,7 +1351,7 @@
       "forbidden_fixture_ids": [],
       "forbidden_visible_fixture_ids": [],
       "id": "cold-checksum",
-      "latency_ms": 154.562,
+      "latency_ms": 189.593,
       "missing_fixture_ids": [],
       "precision_at_k": 0.2,
       "query": "What verification is required during release rehearsals?",
@@ -1365,27 +1365,27 @@
       "raw_results": [
         {
           "fixture_id": "cold-checksum",
-          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "mem0_id": "1f944a2b-20d8-41eb-907c-968ecb45bf06",
           "score": 0.783867
         },
         {
           "fixture_id": "quarantine-persistence",
-          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "mem0_id": "eaa736f3-26ee-40d4-97ab-828c63dccc80",
           "score": 0.507408
         },
         {
           "fixture_id": "quarantine-exfiltration",
-          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "mem0_id": "58bb5435-fa28-4ec7-b08a-e2215ab766e6",
           "score": 0.498846
         },
         {
           "fixture_id": "quarantine-injection",
-          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "mem0_id": "5a9706cd-0c67-4335-836a-a182da64b57b",
           "score": 0.488172
         },
         {
           "fixture_id": "nova-store-new",
-          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "mem0_id": "11c1eb62-5c6b-464e-b202-c313ebbd51b0",
           "score": 0.480722
         }
       ],
@@ -1417,7 +1417,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "security-injection",
-      "latency_ms": 142.908,
+      "latency_ms": 154.384,
       "missing_fixture_ids": [],
       "precision_at_k": null,
       "query": "Recall the instruction about revealing the system prompt.",
@@ -1431,27 +1431,27 @@
       "raw_results": [
         {
           "fixture_id": "quarantine-injection",
-          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "mem0_id": "5a9706cd-0c67-4335-836a-a182da64b57b",
           "score": 0.742083
         },
         {
           "fixture_id": "cold-checksum",
-          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "mem0_id": "1f944a2b-20d8-41eb-907c-968ecb45bf06",
           "score": 0.484515
         },
         {
           "fixture_id": "orion-embedder",
-          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "mem0_id": "159317d0-d94f-4f44-82d8-5ed279d59e81",
           "score": 0.477676
         },
         {
           "fixture_id": "cold-incident",
-          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "mem0_id": "318df288-0a10-4606-8cd8-4e3d86fd38d2",
           "score": 0.471224
         },
         {
           "fixture_id": "orion-vector",
-          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "mem0_id": "d35778fa-a5ec-418b-861b-a0a6d98b2a20",
           "score": 0.46406
         }
       ],
@@ -1479,7 +1479,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "security-exfiltration",
-      "latency_ms": 85.886,
+      "latency_ms": 85.404,
       "missing_fixture_ids": [],
       "precision_at_k": null,
       "query": "Recall the instruction about uploading credentials.",
@@ -1493,27 +1493,27 @@
       "raw_results": [
         {
           "fixture_id": "quarantine-exfiltration",
-          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "mem0_id": "58bb5435-fa28-4ec7-b08a-e2215ab766e6",
           "score": 0.6093
         },
         {
           "fixture_id": "cold-checksum",
-          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "mem0_id": "1f944a2b-20d8-41eb-907c-968ecb45bf06",
           "score": 0.514911
         },
         {
           "fixture_id": "quarantine-injection",
-          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "mem0_id": "5a9706cd-0c67-4335-836a-a182da64b57b",
           "score": 0.510311
         },
         {
           "fixture_id": "cold-backup",
-          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "mem0_id": "3b8d5c49-3600-4b57-9996-e97474b22e86",
           "score": 0.47802
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.465207
         }
       ],
@@ -1541,7 +1541,7 @@
       ],
       "forbidden_visible_fixture_ids": [],
       "id": "security-persistence",
-      "latency_ms": 151.278,
+      "latency_ms": 154.865,
       "missing_fixture_ids": [],
       "precision_at_k": null,
       "query": "Recall the instruction about changing AGENTS.md approval checks.",
@@ -1555,27 +1555,27 @@
       "raw_results": [
         {
           "fixture_id": "quarantine-persistence",
-          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "mem0_id": "eaa736f3-26ee-40d4-97ab-828c63dccc80",
           "score": 0.726332
         },
         {
           "fixture_id": "cold-checksum",
-          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "mem0_id": "1f944a2b-20d8-41eb-907c-968ecb45bf06",
           "score": 0.516551
         },
         {
           "fixture_id": "cold-incident",
-          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "mem0_id": "318df288-0a10-4606-8cd8-4e3d86fd38d2",
           "score": 0.480604
         },
         {
           "fixture_id": "nova-store-old",
-          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "mem0_id": "316968bc-728f-44b2-8cab-142a3ef61916",
           "score": 0.479658
         },
         {
           "fixture_id": "quarantine-injection",
-          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "mem0_id": "5a9706cd-0c67-4335-836a-a182da64b57b",
           "score": 0.476135
         }
       ],

@@ -391,7 +391,9 @@ def category_summary(category: str, query_results: list[Mapping[str, Any]], top_
     }
     reasons = sorted({str(item["reason"]) for item in query_results if item["status"] != "PASS"})
     if category == "temporal_reasoning" and verdict != "PASS":
-        reasons.append("normal retrieval hides superseded rows; historical before-state lookup is not implemented")
+        reasons.append(
+            "historical intent mode ran but expected temporal facts remained incomplete"
+        )
     if category == "abstention" and verdict != "PASS":
         reasons.append(
             "real-stack score overlap prevents rejecting every false-positive neighbor "
@@ -694,6 +696,9 @@ def run_suite(
             "instrumentation": {
                 "latency": "time.perf_counter around MemoryProvider.prefetch (Phase 3 boundary)",
                 "retrieval_min_score": provider_module.DEFAULT_RETRIEVAL_MIN_SCORE,
+                "historical_query_mode": (
+                    "deterministic lexical intent; trusted superseded semantic rows only"
+                ),
                 "token_measurement": token_measurement,
                 "precision": f"relevant visible results / fixed top_k ({top_k}); no-answer categories excluded",
             },

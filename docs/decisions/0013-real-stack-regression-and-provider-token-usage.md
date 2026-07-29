@@ -73,4 +73,6 @@ Baseline mencerminkan stack lokal sebenarnya dan aman diulang, tetapi hasil
 latency tetap sensitif terhadap load Ollama/host. Token measurement membutuhkan
 endpoint 9router dan menambah panggilan model kecil. Temporal reasoning normal
 diperkirakan partial karena retrieval policy sengaja menyembunyikan row
-superseded; suite harus mencatat gap tersebut, bukan membypass policy.
+superseded; suite harus mencatat gap tersebut, bukan membypass policy. Gap
+temporal ini kemudian diselesaikan oleh mode historis eksplisit ADR-0014 tanpa
+mengubah current-state policy.

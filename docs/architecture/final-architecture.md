@@ -196,8 +196,10 @@ Cek relevansi ke hot_sessions sesi aktif dulu (murah, tanpa Mem0)
 mem0.search(query) → daftar hasil + mem0_id
    │
    ▼
-JOIN ke memory_index WHERE status='trusted' AND (t_invalid IS NULL)
-   │  (buang hasil yang sudah di-supersede atau masih quarantined)
+JOIN ke memory_index WHERE status='trusted'
+   │  mode normal: wajib t_invalid IS NULL
+   │  mode historis eksplisit: superseded semantic boleh visible (ADR-0014)
+   │  candidate/quarantined dan invalid episodic selalu dibuang
    ▼
 Urutkan: skor relevansi → importance_score → recency
    │

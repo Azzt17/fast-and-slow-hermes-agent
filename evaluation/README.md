@@ -42,6 +42,10 @@ Kategori tertentu dapat dijalankan ulang dengan
 Threshold retrieval default `0.55`; override operasional memakai
 `HERMES_DUAL_MEMORY_MIN_SCORE`.
 
+Query dengan marker temporal eksplisit memakai mode historis ADR-0014. Mode ini
+tetap melalui raw Mem0 top-k dan shadow policy; hanya superseded semantic
+trusted yang ditambahkan ke current state dengan validity attributes.
+
 ## Interpretasi
 
 - Recall/precision hanya memakai query yang memang punya expected facts.
