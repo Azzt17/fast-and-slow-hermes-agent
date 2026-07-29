@@ -41,6 +41,8 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 - Baseline regression: schema v2, 48 query, overall `PASS`.
 - Visualisasi Graphify: user service `graphify-visualization.service`, port
   `8765`, bind eksklusif ke alamat `tailscale0`; hanya `graph.html` yang served.
+- Telegram research: bot profile-scoped Nellie aktif dalam polling mode; token
+  berbeda dari bot Asa dan allowlist terbatas pada user yang sama.
 
 ## Open Items
 

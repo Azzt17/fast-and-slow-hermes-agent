@@ -107,6 +107,31 @@ lokal `Asia/Shanghai` dan format ISO-8601.
   bila visualisasi tidak lagi diperlukan.
 - Result: `resolved`
 
+### 2026-07-29T13:53+08:00 — Telegram Nellie diaktifkan
+
+- Session: `codex-beta-nellie-telegram`
+- Actor: `Codex`
+- Task: Mendiagnosis dan memperbaiki profile research yang tidak merespons di
+  Telegram.
+- Mode: `maintenance`
+- Beta code/config: Code/provider/model tidak berubah; credential Telegram
+  profile-scoped ditambahkan ke `.env` research dengan mode `0600`.
+- Observation: Root cause adalah gateway research tidak memiliki token maupun
+  allowlist Telegram, sehingga startup menyatakan tidak ada messaging platform
+  aktif. Token bot Nellie berbeda dari bot Asa; allowlist/home channel disalin
+  dari profile default tanpa mencatat nilainya ke repo.
+- Observation: Telegram `getMe` PASS; bot research teridentifikasi sebagai
+  `@NellieFaridResearchBot`. Gateway restart hanya untuk research; adapter
+  connected dalam polling mode, command registration PASS, dua socket API aktif,
+  tidak ada unauthorized/conflict/forbidden, dan pesan outbound test terkirim.
+- Severity: `S3`
+- Evidence: Config check mendeteksi token+allowlist; bot identity distinct PASS;
+  service active/stable; Telegram sendMessage PASS. Snapshot config sebelum
+  perubahan disimpan privat di luar repo.
+- Action: Farid mengirim `/start` atau pesan biasa ke bot Nellie untuk smoke
+  inbound+agent response. Monitor model response dan memory profile isolation.
+- Result: `resolved`
+
 ### 2026-07-29T13:27+08:00 — verifikasi setelah Graphify update
 
 - Session: `codex-beta-graphify-serve`

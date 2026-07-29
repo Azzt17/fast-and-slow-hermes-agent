@@ -9,6 +9,7 @@ jurnal observasi dan tidak menggantikannya.
 | BETA-001 | 2026-07-29 | data/config | `beta/0.1-dogfooding-docs` | ADR-0016 | 48-query PASS; unit 60 PASS | clean-start verified | active |
 | BETA-002 | 2026-07-29 | config | `beta/0.1-dogfooding-docs` | ADR-0016 | profile isolation + model smoke PASS | clean-start verified | active |
 | BETA-003 | 2026-07-29 | config | `beta/0.1-dogfooding-docs` | ADR-0016 | HTTP content match + tailnet-only bind PASS | clean-start verified | active |
+| BETA-004 | 2026-07-29 | config | `beta/0.1-dogfooding-docs` | ADR-0016 | Telegram getMe/polling/outbound PASS | runtime config snapshot | active |
 
 ## Aturan
 
