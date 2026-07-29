@@ -201,6 +201,9 @@ JOIN ke memory_index WHERE status='trusted'
    │  mode historis eksplisit: superseded semantic boleh visible (ADR-0014)
    │  candidate/quarantined dan invalid episodic selalu dibuang
    ▼
+Kandidat scored yang lolos threshold → answerability verifier bounded
+   │  hanya bukti langsung yang boleh visible; gagal/timeout → reject
+   ▼
 Urutkan: skor relevansi → importance_score → recency
    │
    ▼

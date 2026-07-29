@@ -1,7 +1,7 @@
 # Hasil Uji Fase 8
 
 **Tanggal**: 2026-07-29
-**Status**: PASS (suite selesai; baseline overall PARTIAL)
+**Status**: PASS (suite dan baseline overall PASS)
 
 ## Audit Instrumentasi Existing
 
@@ -16,6 +16,8 @@ nyata dan tidak dipakai. Token Efficiency diukur dari differential
 `usage.prompt_tokens` provider 9router: prompt system identik dengan memory block
 dibandingkan prompt system identik tanpa block. Model direct yang dipakai adalah
 `ag/gemini-3.5-flash-extra-low`; response melaporkan model `gemini-default`.
+Token verifier dicatat terpisah dan tidak dicampur dengan token context yang
+akhirnya diinjeksi.
 
 ## Struktur Suite
 
@@ -26,10 +28,12 @@ dibandingkan prompt system identik tanpa block. Model direct yang dipakai adalah
 
 Suite membuat Mem0 `2.0.14` + Chroma `1.5.9` dalam temporary directory,
 memakai Ollama `nomic-embed-text`, menulis semua fixture dengan `infer=False`,
-dan melewatkan 20 query melalui `MemoryProvider.prefetch()` serta shadow policy
+dan melewatkan 48 query melalui `MemoryProvider.prefetch()` serta shadow policy
 SQLite yang sama dengan runtime. `user_store_touched=false` tercatat di report.
 
-Corpus mencakup 16 fixture dan 20 query:
+Corpus follow-up mencakup 16 fixture dan 48 query. Kategori abstention diperbesar
+dari 2 menjadi 30 hard-negative yang dekat secara semantik tetapi menanyakan
+atribut yang tidak pernah disimpan:
 
 | Kategori | Query |
 |---|---:|
@@ -37,7 +41,7 @@ Corpus mencakup 16 fixture dan 20 query:
 | Multi-session aggregation | 3 |
 | Knowledge update | 3 |
 | Temporal reasoning | 3 |
-| Abstention | 2 |
+| Abstention | 30 |
 | Cross-tier recall | 3 |
 | Security exclusion | 3 |
 
@@ -56,7 +60,7 @@ lima item di sisi provider sebagai defense-in-depth. Unit regression juga
 mensimulasikan backend yang mengabaikan top-k dan memverifikasi hanya lima blok
 yang diteruskan.
 
-## Threshold Relevansi dan Abstention
+## Answerability Gate dan Abstention
 
 Run tanpa threshold merekam distribusi score real-stack:
 
@@ -82,21 +86,21 @@ dituning dengan `HERMES_DUAL_MEMORY_MIN_SCORE`.
 ## Metrik Aggregate
 
 ```text
-Overall verdict:              PARTIAL
-Queries:                      20
+Overall verdict:              PASS
+Queries:                      48
 Answerable queries:           15
 Expected fact occurrences:   20
 Recalled fact occurrences:   20
 Memory Recall:                100.00%
 Memory Precision@5:           26.67%
-Latency p50:                  181.308 ms
-Latency p95:                  257.504 ms
-Latency mean:                 180.804 ms
-Token total injected:         2,790
-Token mean/query:             139.5
-Token p50/query:              81
-Token p95/query:              368
-Abstention accuracy:          50.00%
+Latency p50:                  1350.603 ms
+Latency p95:                  1675.018 ms
+Latency mean:                 1255.022 ms
+Token total injected:         1,782
+Token mean/query:             37.125
+Token p50/query:              0
+Token p95/query:              168
+Abstention accuracy:          100.00%
 Security exclusion rate:      100.00%
 ```
 
@@ -108,15 +112,15 @@ denominator recall/precision aggregate.
 
 | Kategori | Verdict | Recall | Precision@5 | Latency p50/p95 | Mean token |
 |---|---|---:|---:|---:|---:|
-| Single-session recall | PASS | 100% | 20.00% | 181.308 / 257.504 ms | 108.0 |
-| Multi-session aggregation | PASS | 100% | 46.67% | 212.640 / 300.228 ms | 334.333 |
-| Knowledge update | PASS | 100% | 20.00% | 182.013 / 182.103 ms | 80.0 |
-| Temporal reasoning | PASS | 100% | 26.67% | 182.051 / 185.340 ms | 300.0 |
-| Abstention | PARTIAL | n/a | n/a | 147.061 / 154.388 ms | 40.5 |
-| Cross-tier recall | PASS | 100% | 20.00% | 189.593 / 197.310 ms | 80.667 |
-| Security exclusion | PASS | n/a | n/a | 154.384 / 154.865 ms | 0.0 |
+| Single-session recall | PASS | 100% | 20.00% | 1191.148 / 1231.591 ms | 80.0 |
+| Multi-session aggregation | PASS | 100% | 46.67% | 1375.370 / 1574.224 ms | 193.333 |
+| Knowledge update | PASS | 100% | 20.00% | 1376.945 / 1609.062 ms | 80.0 |
+| Temporal reasoning | PASS | 100% | 26.67% | 1286.499 / 1590.319 ms | 160.0 |
+| Abstention | PASS | n/a | n/a | 1377.667 / 1677.652 ms | 0.0 |
+| Cross-tier recall | PASS | 100% | 20.00% | 1089.868 / 1489.477 ms | 80.667 |
+| Security exclusion | PASS | n/a | n/a | 168.376 / 176.167 ms | 0.0 |
 
-## Kategori Lemah Apa Adanya
+## Follow-up Kategori
 
 ### Temporal Reasoning — PASS (Follow-up ADR-0014)
 
@@ -131,12 +135,19 @@ current-state, quarantine, orphan bertanda shadow, dan invalid episodic tetap
 diblok. Recall temporal naik `50%` → `100%`; token temporal mean naik karena
 before+current state sengaja masuk bersama pada query historis.
 
-### Abstention — PARTIAL
+### Abstention — PASS (Follow-up ADR-0015)
 
-Dari dua pertanyaan tanpa jawaban, satu sekarang benar-benar kosong dan satu
-masih mengembalikan neighbor Toraja coffee dengan score `0.598476`. Accuracy
-menjadi `50%`. Threshold lebih tinggi dapat mengosongkan query tersebut, tetapi
-akan menurunkan recall expected facts yang skornya `0.567921–0.595779`.
+Pre-gate expanded run hanya abstain pada `1/30` query (`3.33%`). False neighbor
+bahkan mencapai score `0.846105`, membuktikan tidak ada zona score tinggi yang
+aman diterima langsung. ADR-0015 karena itu memverifikasi seluruh kandidat scored
+yang lolos threshold `0.55` setelah shadow policy. Satu batch JSON menilai bukti
+langsung per kandidat; format invalid boleh retry sekali dalam total timeout
+yang sama, lalu fail-closed.
+
+Final run mencapai abstention `30/30` (`100%`) tanpa menurunkan recall atau
+security. Semua `44` verifier query selesai `verified`; `unavailable=0`, retry=0.
+Biayanya signifikan: verifier latency p50/p95 `1166.972/1488.342 ms`, prompt
+token total `111,905`, completion token `408`.
 
 ## Cross-Tier dan Security
 
@@ -155,7 +166,7 @@ leak `0/3`, exclusion rate `100%`.
 
 ```text
 .venv/bin/python -m unittest discover -s tests -v
-Ran 55 tests
+Ran 62 tests
 OK (skipped=2)
 
 Hermes runtime integration:

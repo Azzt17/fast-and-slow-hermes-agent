@@ -261,6 +261,174 @@
       "expected_fixture_ids": []
     },
     {
+      "id": "abstention-atlas-font",
+      "category": "abstention",
+      "query": "Which font did Project Atlas select for launch?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-atlas-launch-date",
+      "category": "abstention",
+      "query": "On what date did Project Atlas launch?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-atlas-logo",
+      "category": "abstention",
+      "query": "What logo mark did Project Atlas choose?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-farid-tea",
+      "category": "abstention",
+      "query": "Which tea does Farid prefer during morning work?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-coffee-brew",
+      "category": "abstention",
+      "query": "How does Farid brew his morning coffee?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-coffee-roast",
+      "category": "abstention",
+      "query": "What roast level does Farid prefer for Toraja coffee?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-editor-theme",
+      "category": "abstention",
+      "query": "Which theme is used in the preferred Markdown editor?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-editor-plugin",
+      "category": "abstention",
+      "query": "Which Obsidian plugin is preferred for Markdown editing?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-editor-sync",
+      "category": "abstention",
+      "query": "How are files synchronized in the preferred Markdown editor?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-os",
+      "category": "abstention",
+      "query": "Which operating system hosts Project Orion?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-cloud",
+      "category": "abstention",
+      "query": "Which cloud provider runs Project Orion?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-graph-db",
+      "category": "abstention",
+      "query": "Which graph database does Project Orion use?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-distance",
+      "category": "abstention",
+      "query": "Which distance metric does Project Orion use for vector search?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-embedding-dim",
+      "category": "abstention",
+      "query": "How many dimensions are in Project Orion's embeddings?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-orion-license",
+      "category": "abstention",
+      "query": "Under which license is Project Orion released?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-zenith-backup-region",
+      "category": "abstention",
+      "query": "Which region stores Project Zenith backups?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-zenith-deploy-date",
+      "category": "abstention",
+      "query": "When was Project Zenith deployed to Tokyo?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-zenith-zone",
+      "category": "abstention",
+      "query": "Which availability zone hosts Project Zenith in Tokyo?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-zenith-owner",
+      "category": "abstention",
+      "query": "Who owns the Project Zenith deployment?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-nova-embedder",
+      "category": "abstention",
+      "query": "Which embedding model does Project Nova use with Chroma?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-nova-migration-date",
+      "category": "abstention",
+      "query": "When did Project Nova migrate from LanceDB to Chroma?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-nova-migration-reason",
+      "category": "abstention",
+      "query": "Why did Project Nova migrate away from LanceDB?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-nova-owner",
+      "category": "abstention",
+      "query": "Who approved Project Nova's vector-store migration?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-backup-retention",
+      "category": "abstention",
+      "query": "How long are quarterly archive backups retained in Borealis Glacier?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-backup-encryption",
+      "category": "abstention",
+      "query": "Which encryption key protects the Borealis Glacier backups?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-incident-severity",
+      "category": "abstention",
+      "query": "Which incident severity requires a five-whys review?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-incident-owner",
+      "category": "abstention",
+      "query": "Who facilitates incident reviews that use five-whys?",
+      "expected_fixture_ids": []
+    },
+    {
+      "id": "abstention-checksum-algorithm",
+      "category": "abstention",
+      "query": "Which checksum algorithm is required during release rehearsals?",
+      "expected_fixture_ids": []
+    },
+    {
       "id": "cold-backup",
       "category": "cross_tier_recall",
       "query": "Where are quarterly archive backups stored?",

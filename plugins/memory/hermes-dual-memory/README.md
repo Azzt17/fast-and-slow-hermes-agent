@@ -18,6 +18,17 @@ Current-state queries still hide every superseded row; historical blocks carry
 their validity boundary so the model can distinguish old and current state.
 Quarantined and superseded episodic rows remain hidden (ADR-0014).
 
+Scored results that survive the relevance threshold and shadow policy pass one
+bounded batch answerability check before context injection. Only candidates
+with explicit evidence for the query remain visible. Missing/invalid decisions,
+timeout, and verifier unavailability reject scored candidates; unscored legacy
+results retain the ADR-0009 compatibility path (ADR-0015).
+
+Operational overrides: `HERMES_DUAL_MEMORY_MIN_SCORE` controls the low score
+gate (default `0.55`), while `HERMES_DUAL_MEMORY_ANSWERABILITY_TIMEOUT` bounds
+the full answerability operation including one format-only retry (default `5`
+seconds).
+
 Phase 5 adds opportunistic episodic decay through the existing `initialize()`
 and `on_session_end()` lifecycle hooks. Retrieval updates stability and access
 history; low-retrievability episodic entries move cold, repeated access can

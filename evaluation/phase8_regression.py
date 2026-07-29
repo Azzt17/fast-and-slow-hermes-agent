@@ -27,7 +27,7 @@ DEFAULT_CORPUS = Path(__file__).with_name("phase8_corpus.json")
 DEFAULT_OUTPUT = REPO_ROOT / "docs" / "testing" / "baselines" / "phase-8-baseline.json"
 SECURITY_CORPUS = REPO_ROOT / "tests" / "security_corpus.json"
 DEFAULT_TOKEN_MODEL = "ag/gemini-3.5-flash-extra-low"
-REPORT_SCHEMA_VERSION = 1
+REPORT_SCHEMA_VERSION = 2
 
 
 def utc_now_iso() -> str:
@@ -168,7 +168,7 @@ class RecordingMemory:
         return getattr(self.client, name)
 
 
-class ProviderTokenMeter:
+class ProviderModelClient:
     def __init__(self, model: str) -> None:
         hermes_source = Path(
             os.environ.get("HERMES_SOURCE_ROOT", "~/.hermes/hermes-agent")
@@ -219,6 +219,61 @@ class ProviderTokenMeter:
             raise RuntimeError("token provider did not return usage.prompt_tokens")
         self.returned_models.add(str(response.model or "unknown"))
         return int(usage.prompt_tokens)
+
+    def call(self, **kwargs: Any) -> Any:
+        extra_body = kwargs.get("extra_body") or {}
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=kwargs["messages"],
+            temperature=kwargs.get("temperature", 0),
+            max_tokens=kwargs.get("max_tokens", 600),
+            timeout=kwargs.get("timeout", 30),
+            response_format=extra_body.get("response_format"),
+        )
+        self.returned_models.add(str(response.model or "unknown"))
+        return response
+
+def answerability_summary(query_results: list[Mapping[str, Any]]) -> dict[str, Any]:
+    events = [
+        event
+        for item in query_results
+        for event in item.get("answerability_events", [])
+    ]
+    verifier_events = [event for event in events if event.get("status") != "not_needed"]
+    prompt_tokens = [
+        int(event["prompt_tokens"])
+        for event in verifier_events
+        if event.get("prompt_tokens") is not None
+    ]
+    completion_tokens = [
+        int(event["completion_tokens"])
+        for event in verifier_events
+        if event.get("completion_tokens") is not None
+    ]
+    return {
+        "query_count": len(query_results),
+        "query_count_with_verifier": len(verifier_events),
+        "call_count": sum(int(event.get("attempt_count") or 0) for event in verifier_events),
+        "status_counts": {
+            status: sum(event.get("status") == status for event in events)
+            for status in ("verified", "unavailable", "not_needed")
+        },
+        "candidate_count": sum(int(event.get("candidate_count") or 0) for event in verifier_events),
+        "accepted_count": sum(int(event.get("accepted_count") or 0) for event in verifier_events),
+        "latency_ms": distribution(
+            float(event.get("latency_ms") or 0.0) for event in verifier_events
+        ),
+        "prompt_tokens": {
+            "total": sum(prompt_tokens),
+            "per_verifier_query": distribution(prompt_tokens),
+            "measured_query_count": len(prompt_tokens),
+        },
+        "completion_tokens": {
+            "total": sum(completion_tokens),
+            "per_verifier_query": distribution(completion_tokens),
+            "measured_query_count": len(completion_tokens),
+        },
+    }
 
 
 def mem0_config(root: Path) -> dict[str, Any]:
@@ -396,8 +451,7 @@ def category_summary(category: str, query_results: list[Mapping[str, Any]], top_
         )
     if category == "abstention" and verdict != "PASS":
         reasons.append(
-            "real-stack score overlap prevents rejecting every false-positive neighbor "
-            "without reducing expected-fact recall"
+            "answerability gate left at least one no-answer query with visible memory"
         )
     summary["reasons"] = reasons or ["all category expectations passed"]
     return summary
@@ -534,6 +588,7 @@ def run_suite(
         raise ValueError("category filter selected no queries")
     top_k = int(corpus.get("top_k") or 5)
     provider_module = load_provider_module()
+    verifier_client = ProviderModelClient(token_model)
     user_id = "phase8-regression"
     with tempfile.TemporaryDirectory(prefix="hermes-dual-memory-phase8-") as temporary_directory:
         root = Path(temporary_directory)
@@ -559,18 +614,21 @@ def run_suite(
             raise RuntimeError("not all cross-tier fixtures were demoted")
         mem0_to_fixture = {value: key for key, value in fixture_to_mem0.items()}
         recording_memory = RecordingMemory(memory, mem0_to_fixture)
+        answerability_events: list[dict[str, Any]] = []
         provider = provider_module.MemoryProvider()
         provider.initialize(
             "phase8-query-session",
             hermes_home=root,
             mem0_client=recording_memory,
-            llm_callable=lambda **_: "",
+            llm_callable=verifier_client.call,
+            answerability_observer=answerability_events.append,
             memory_user_id=user_id,
         )
         for thread in list(provider._maintenance_threads):
             thread.join(timeout=2)
         query_results = []
         for query in queries_to_run:
+            event_start = len(answerability_events)
             tier_before_query: dict[str, str] = {}
             if query["category"] == "cross_tier_recall":
                 expected_mem0_ids = [
@@ -612,6 +670,7 @@ def run_suite(
                     "context_chars": len(context_block),
                     "context_sha256": hashlib.sha256(context_block.encode()).hexdigest(),
                     "context_tokens": None,
+                    "answerability_events": list(answerability_events[event_start:]),
                     "expected_tiers_before_query": tier_before_query,
                     **scored,
                     "_context_block": context_block,
@@ -630,14 +689,13 @@ def run_suite(
             token_measurement = {"status": "skipped", "reason": "--skip-token-measurement"}
         else:
             try:
-                token_meter = ProviderTokenMeter(token_model)
-                baseline_before = token_meter.prompt_tokens("")
+                baseline_before = verifier_client.prompt_tokens("")
                 for item in query_results:
-                    prompt_tokens = token_meter.prompt_tokens(str(item["_context_block"]))
+                    prompt_tokens = verifier_client.prompt_tokens(str(item["_context_block"]))
                     item["context_tokens"] = prompt_tokens - baseline_before
                     if item["context_tokens"] < 0:
                         raise RuntimeError("provider token differential became negative")
-                baseline_after = token_meter.prompt_tokens("")
+                baseline_after = verifier_client.prompt_tokens("")
                 if baseline_before != baseline_after:
                     raise RuntimeError(
                         f"provider baseline drifted from {baseline_before} to {baseline_after}"
@@ -646,7 +704,7 @@ def run_suite(
                     "status": "measured",
                     "method": "usage.prompt_tokens differential against identical empty context",
                     "requested_model": token_model,
-                    "returned_models": sorted(token_meter.returned_models),
+                    "returned_models": sorted(verifier_client.returned_models),
                     "baseline_prompt_tokens": baseline_before,
                 }
             except Exception as exc:
@@ -699,6 +757,12 @@ def run_suite(
                 "historical_query_mode": (
                     "deterministic lexical intent; trusted superseded semantic rows only"
                 ),
+                "answerability": {
+                    "policy": "all scored visible-policy candidates at or above retrieval_min_score",
+                    "model": token_model,
+                    "timeout_seconds": provider._answerability_timeout,
+                    **answerability_summary(query_results),
+                },
                 "token_measurement": token_measurement,
                 "precision": f"relevant visible results / fixed top_k ({top_k}); no-answer categories excluded",
             },

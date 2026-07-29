@@ -2,6 +2,7 @@
 
 ## 2026-07-29
 
+- [fase-8 follow-up] menambahkan bounded batch answerability gate untuk seluruh kandidat scored yang lolos threshold/shadow policy dan memperbesar abstention corpus menjadi 30 hard-negative. Full 48-query real-stack menjadi overall `PASS`: abstention `100%`, recall `100%`, precision@5 `26.67%`, security exclusion `100%`; trade-off latency p50/p95 `1350.603/1675.018 ms` dan verifier `111,905` prompt token dicatat eksplisit (ref ADR-0015).
 - [fase-8 follow-up] menutup gap temporal reasoning melalui mode historis deterministik yang hanya membuka superseded semantic trusted; current-state, quarantine, dan invalid episodic tetap tersembunyi. Real-stack temporal recall naik `50%` → `100%`; baseline aggregate recall menjadi `100%`, precision@5 `26.67%`, security exclusion tetap `100%`, overall tetap `PARTIAL` hanya karena abstention `50%` (ref ADR-0014).
 - [fase-8] menutup regression suite real-stack terisolasi untuk 20 query dalam tujuh kategori, memperbaiki retrieval Mem0 menjadi `top_k=5` plus cap lokal, dan menambahkan relevance threshold `0.55`. Baseline mencatat recall `90%`, precision@5 `24%`, latency p50/p95 `160.953/223.123 ms`, mean context `119.1` token/query, security exclusion `100%`, serta gap temporal reasoning dan abstention tetap `PARTIAL` apa adanya (ref ADR-0013).
 
