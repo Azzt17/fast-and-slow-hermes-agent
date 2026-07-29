@@ -176,7 +176,7 @@ class DecayTest(unittest.TestCase):
                 "session-retrieval",
                 hermes_home=tmpdir,
                 mem0_client=mem0,
-                llm_callable=lambda **_: "",
+                llm_callable=lambda **_: '{"c0":true}',
             )
             for thread in list(provider._maintenance_threads):
                 thread.join(timeout=1)

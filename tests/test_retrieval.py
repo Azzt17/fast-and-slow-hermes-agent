@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import tempfile
 import time
 import unittest
@@ -29,6 +30,88 @@ class SearchMem0:
         return self.result
 
 class RetrievalTest(unittest.TestCase):
+    def test_scored_candidates_are_batch_verified_after_shadow_policy(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "id": "direct",
+                        "memory": "Farid's favorite constellation is Orion.",
+                        "metadata": {"status": "trusted", "shadow_index_version": 1},
+                        "score": 0.63,
+                    },
+                    {
+                        "id": "neighbor",
+                        "memory": "Farid prefers Toraja coffee.",
+                        "metadata": {"status": "trusted", "shadow_index_version": 1},
+                        "score": 0.91,
+                    },
+                    {
+                        "id": "quarantined",
+                        "memory": "Farid's favorite constellation is Hydra.",
+                        "metadata": {"status": "trusted", "shadow_index_version": 1},
+                        "score": 0.99,
+                    },
+                ]
+            }
+        )
+        verifier_payloads = []
+        events = []
+
+        def llm_call(**kwargs):
+            payload = json.loads(kwargs["messages"][1]["content"])
+            verifier_payloads.append(payload)
+            return json.dumps(
+                {
+                    candidate["id"]: "constellation is Orion" in candidate["content"]
+                    for candidate in payload["candidates"]
+                }
+            )
+
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-answerability",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=llm_call,
+                answerability_observer=events.append,
+            )
+            for mem0_id, status in (
+                ("direct", "trusted"),
+                ("neighbor", "trusted"),
+                ("quarantined", "quarantined"),
+            ):
+                provider._store.record_memory(
+                    mem0_id=mem0_id,
+                    session_id="source",
+                    memory_type="semantic",
+                    importance_score=5,
+                    entities=[],
+                    relations=[],
+                    status=status,
+                )
+
+            output = provider.prefetch("What is Farid's favorite constellation?")
+
+            self.assertIn("constellation is Orion", output)
+            self.assertNotIn("Toraja coffee", output)
+            self.assertNotIn("Hydra", output)
+            self.assertEqual(len(verifier_payloads), 1)
+            self.assertEqual(len(verifier_payloads[0]["candidates"]), 2)
+            self.assertNotIn(
+                "Hydra",
+                " ".join(item["content"] for item in verifier_payloads[0]["candidates"]),
+            )
+            self.assertEqual(events[0]["candidate_count"], 2)
+            self.assertEqual(events[0]["accepted_count"], 1)
+            rows = {row["mem0_id"]: row for row in provider._store.fetch_memory_index()}
+            self.assertEqual(rows["direct"]["access_count"], 1)
+            self.assertEqual(rows["neighbor"]["access_count"], 0)
+            self.assertEqual(rows["quarantined"]["access_count"], 0)
+            provider.shutdown()
+
     def test_historical_intent_detection_is_deterministic_and_conservative(self):
         module = load_provider_module()
         for query in (
@@ -119,7 +202,7 @@ class RetrievalTest(unittest.TestCase):
             self.assertEqual(provider.prefetch("unknown answer"), "")
             provider.shutdown()
 
-    def test_prefetch_keeps_scores_at_threshold_and_legacy_missing_scores(self):
+    def test_scored_candidate_fails_closed_without_verifier_but_legacy_remains(self):
         mem0 = SearchMem0(
             {
                 "results": [
@@ -136,6 +219,7 @@ class RetrievalTest(unittest.TestCase):
             }
         )
         module = load_provider_module()
+        events = []
         with tempfile.TemporaryDirectory() as tmp:
             provider = module.MemoryProvider()
             provider.initialize(
@@ -143,10 +227,15 @@ class RetrievalTest(unittest.TestCase):
                 hermes_home=tmp,
                 mem0_client=mem0,
                 llm_callable=lambda **_: "",
+                answerability_observer=events.append,
             )
             output = provider.prefetch("threshold")
-            self.assertIn("Threshold memory.", output)
+            self.assertNotIn("Threshold memory.", output)
             self.assertIn("Legacy result without score.", output)
+            self.assertEqual(
+                events[0]["reason"],
+                "JSONDecodeError:Expecting value: line 1 column 1 (char 0)",
+            )
             provider.shutdown()
 
     def test_prefetch_min_score_can_be_overridden(self):

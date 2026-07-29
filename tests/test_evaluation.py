@@ -7,6 +7,7 @@ from pathlib import Path
 
 from evaluation.phase8_regression import (
     aggregate_report,
+    answerability_summary,
     baseline_comparison,
     category_summary,
     distribution,
@@ -21,10 +22,18 @@ CORPUS_PATH = Path(__file__).resolve().parents[1] / "evaluation" / "phase8_corpu
 
 
 class Phase8EvaluationTest(unittest.TestCase):
-    def test_corpus_has_twenty_queries_and_all_categories(self):
+    def test_corpus_has_hard_negative_abstention_set_and_all_categories(self):
         corpus = load_corpus(CORPUS_PATH)
         self.assertEqual(len(corpus["fixtures"]), 16)
-        self.assertEqual(len(corpus["queries"]), 20)
+        self.assertEqual(len(corpus["queries"]), 48)
+        self.assertEqual(
+            sum(item["category"] == "abstention" for item in corpus["queries"]),
+            30,
+        )
+        self.assertEqual(
+            len({item["id"] for item in corpus["queries"]}),
+            len(corpus["queries"]),
+        )
         security_fixtures = [
             item for item in corpus["fixtures"] if item.get("source_security_corpus_id")
         ]
@@ -88,8 +97,7 @@ class Phase8EvaluationTest(unittest.TestCase):
             5,
         )
         self.assertIn(
-            "real-stack score overlap prevents rejecting every false-positive neighbor "
-            "without reducing expected-fact recall",
+            "answerability gate left at least one no-answer query with visible memory",
             abstention_summary["reasons"],
         )
 
@@ -182,6 +190,57 @@ class Phase8EvaluationTest(unittest.TestCase):
                 unavailable["metric_deltas"]["mean_context_tokens"]["status"],
                 "unavailable",
             )
+
+    def test_answerability_summary_counts_calls_retries_and_usage(self):
+        summary = answerability_summary(
+            [
+                {
+                    "answerability_events": [
+                        {
+                            "status": "verified",
+                            "candidate_count": 2,
+                            "accepted_count": 1,
+                            "latency_ms": 120.0,
+                            "prompt_tokens": 100,
+                            "completion_tokens": 8,
+                            "attempt_count": 1,
+                        }
+                    ]
+                },
+                {
+                    "answerability_events": [
+                        {
+                            "status": "verified",
+                            "candidate_count": 1,
+                            "accepted_count": 0,
+                            "latency_ms": 200.0,
+                            "prompt_tokens": 210,
+                            "completion_tokens": 15,
+                            "attempt_count": 2,
+                        }
+                    ]
+                },
+                {
+                    "answerability_events": [
+                        {
+                            "status": "not_needed",
+                            "candidate_count": 0,
+                            "accepted_count": 0,
+                            "latency_ms": 0.0,
+                            "prompt_tokens": None,
+                            "completion_tokens": None,
+                            "attempt_count": 0,
+                        }
+                    ]
+                },
+            ]
+        )
+        self.assertEqual(summary["query_count_with_verifier"], 2)
+        self.assertEqual(summary["call_count"], 3)
+        self.assertEqual(summary["candidate_count"], 3)
+        self.assertEqual(summary["accepted_count"], 1)
+        self.assertEqual(summary["prompt_tokens"]["total"], 310)
+        self.assertEqual(summary["completion_tokens"]["total"], 23)
 
 
 if __name__ == "__main__":

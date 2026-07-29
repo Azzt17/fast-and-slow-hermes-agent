@@ -96,6 +96,17 @@ def _load_procedural_module() -> Any:
     spec.loader.exec_module(module)
     return module
 
+def _load_answerability_module() -> Any:
+    """Load the bounded retrieval answerability gate."""
+
+    path = Path(__file__).with_name("answerability.py")
+    spec = importlib.util.spec_from_file_location("hermes_dual_memory.answerability", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load answerability module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 _storage = _load_storage_module()
 HotSessionStore = _storage.HotSessionStore
@@ -103,6 +114,7 @@ _consolidation = _load_consolidation_module()
 _decay = _load_decay_module()
 _admission = _load_admission_module()
 _procedural = _load_procedural_module()
+_answerability = _load_answerability_module()
 
 
 def _estimate_token_count(content: str) -> int:
@@ -130,6 +142,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._prefetch_cache: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_lock = threading.Lock()
+        self._answerability_observer: Any = None
 
     @property
     def name(self) -> str:
@@ -157,6 +170,8 @@ class MemoryProvider(BaseMemoryProvider):
             self._mem0_config, self._hermes_home
         )
         self._llm_call = kwargs.get("llm_callable") or self._load_llm_callable(self._mem0_config)
+        observer = kwargs.get("answerability_observer")
+        self._answerability_observer = observer if callable(observer) else None
         self._search_timeout = float(os.environ.get("HERMES_DUAL_MEMORY_SEARCH_TIMEOUT", "5.0"))
         self._retrieval_min_score = float(
             os.environ.get(
@@ -170,7 +185,14 @@ class MemoryProvider(BaseMemoryProvider):
         self._admission_timeout = float(
             os.environ.get("HERMES_DUAL_MEMORY_ADMISSION_TIMEOUT", "5.0")
         )
+        self._answerability_timeout = float(
+            os.environ.get("HERMES_DUAL_MEMORY_ANSWERABILITY_TIMEOUT", "5.0")
+        )
         self._queue_maintenance(trigger="initialize")
+
+    def _record_answerability_event(self, decision: Any) -> None:
+        if self._answerability_observer is not None:
+            self._answerability_observer(decision.as_dict())
 
     @staticmethod
     def _load_llm_callable(config: dict[str, Any] | None = None) -> Any:
@@ -189,12 +211,14 @@ class MemoryProvider(BaseMemoryProvider):
                 model = llm_config["model"]
 
                 def configured_call(**kwargs: Any) -> Any:
+                    extra_body = kwargs.get("extra_body") or {}
                     return client.chat.completions.create(
                         model=model,
                         messages=kwargs["messages"],
                         temperature=kwargs.get("temperature"),
                         max_tokens=kwargs.get("max_tokens"),
-                        timeout=timeout_seconds,
+                        timeout=kwargs.get("timeout", timeout_seconds),
+                        response_format=extra_body.get("response_format"),
                     )
 
                 return configured_call
@@ -409,8 +433,8 @@ class MemoryProvider(BaseMemoryProvider):
             if isinstance(item, dict) and item.get("id")
         ]
         shadow_states = self._store.retrieval_states(mem0_ids) if self._store is not None else {}
-        blocks: list[str] = []
-        recalled_ids: list[str] = []
+        visible_candidates: list[dict[str, Any]] = []
+        scored_candidates: list[dict[str, str]] = []
         for item in results:
             if not isinstance(item, dict):
                 continue
@@ -439,6 +463,38 @@ class MemoryProvider(BaseMemoryProvider):
             content = str(item.get("memory") or item.get("text") or "").strip()
             if not content:
                 continue
+            candidate_id = f"c{len(visible_candidates)}"
+            candidate = {
+                "candidate_id": candidate_id,
+                "item": item,
+                "mem0_id": mem0_id,
+                "shadow_state": shadow_state,
+                "metadata": metadata,
+                "content": content,
+                "scored": isinstance(item.get("score"), (int, float)),
+            }
+            visible_candidates.append(candidate)
+            if candidate["scored"]:
+                scored_candidates.append({"id": candidate_id, "content": content})
+
+        answerability = _answerability.verify_answerability(
+            query,
+            scored_candidates,
+            llm_call=self._llm_call,
+            timeout_seconds=self._answerability_timeout,
+        )
+        self._record_answerability_event(answerability)
+        accepted_scored = set(answerability.accepted_ids)
+        blocks: list[str] = []
+        recalled_ids: list[str] = []
+        for candidate in visible_candidates:
+            if candidate["scored"] and candidate["candidate_id"] not in accepted_scored:
+                continue
+            item = candidate["item"]
+            mem0_id = candidate["mem0_id"]
+            shadow_state = candidate["shadow_state"]
+            metadata = candidate["metadata"]
+            content = candidate["content"]
             if mem0_id:
                 recalled_ids.append(mem0_id)
             source_session = str(metadata.get("session_id") or target_session)
