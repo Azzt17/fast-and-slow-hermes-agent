@@ -1,6 +1,6 @@
 # Beta Dogfooding v0.1.0-beta.1
 
-**Status**: Preflight — belum mulai
+**Status**: Berjalan — baseline beku sejak `2026-07-29T12:29+08:00`
 **Checkpoint code**: `v0.1.0-beta.1` → `18c770b`
 **Implementation commit**: `c6efb9c`
 **Baseline SHA-256**: `2cc8763ccde2e9437a2ca34a5b5a86d0649e653403464ed9f1031b6ec25409da`
@@ -17,20 +17,29 @@ hardening Fase 9 berdasarkan bukti nyata.
 
 - [x] PR ADR-0015 merged ke `master` (`18c770b`)
 - [x] Tag lokal `v0.1.0-beta.1` dibuat pada checkpoint
-- [ ] Tag beta dipush ke origin
-- [ ] Plugin checkpoint dideploy ke profile Hermes aktif
-- [ ] Gateway direstart setelah deploy
-- [ ] Hash file plugin aktif cocok dengan checkpoint
-- [ ] Snapshot data pre-beta dibuat di luar Git
-- [ ] Manifest snapshot mencatat hash, ukuran, waktu, dan checkpoint code
-- [ ] Smoke test retrieval, temporal, abstention, security, dan consolidation PASS
-- [ ] Waktu mulai beta dicatat di `CURRENT.md` dan `journal.md`
+- [x] Tag beta dipush ke origin
+- [x] Plugin checkpoint dideploy ke profile Hermes aktif
+- [x] Gateway direstart setelah deploy
+- [x] Hash file plugin aktif cocok dengan checkpoint
+- [x] Snapshot data pre-beta dibuat di luar Git
+- [x] Manifest snapshot mencatat hash, ukuran, waktu, dan checkpoint code
+- [x] Smoke test retrieval, temporal, abstention, security, dan consolidation PASS
+- [x] Waktu mulai beta dicatat di `CURRENT.md` dan `journal.md`
 
-Clock beta **tidak berjalan** sebelum semua item preflight selesai.
+Clock beta berjalan sejak `2026-07-29T12:29+08:00`; target kalender awal
+`2026-08-19`, tanpa mengurangi minimum 14 hari aktif dan 30 sesi nyata.
 
 Perintah operasional ada di `RUNBOOK.md`. Manifest snapshot ada di
 `SNAPSHOT-MANIFEST.md`; perubahan beta diringkas di `changes.md` dan dijelaskan
 lebih lengkap secara append-only di `journal.md`.
+
+## Profile Dogfooding
+
+- `default` → Asa; companion harian; model `asa-complex`.
+- `research` → Nellie; evidence synthesis dan knowledge capture; model
+  `nellie-research`.
+- Keduanya memakai provider `hermes-dual-memory` dengan `HERMES_HOME` dan data
+  SQLite/Chroma yang terisolasi. Recall lintas profile dianggap insiden `S1`.
 
 ## Cakupan Task Harian
 

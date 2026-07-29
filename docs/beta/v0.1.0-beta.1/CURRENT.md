@@ -3,43 +3,50 @@
 File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 
 **Versi**: `v0.1.0-beta.1`
-**Status**: Preflight — belum mulai
+**Status**: Berjalan — baseline beku
 **Checkpoint code**: `18c770b`
 **Branch dokumentasi**: `beta/0.1-dogfooding-docs`
-**Tanggal mulai**: Belum ditetapkan
-**Target selesai**: Belum ditetapkan
+**Tanggal mulai**: `2026-07-29T12:29+08:00`
+**Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
 **Hari aktif / target**: `0 / 14`
 **Sesi nyata / target**: `0 / 30`
 **Severity tertinggi unresolved**: Tidak ada
 
 ## Temuan Preflight Saat Ini
 
-- PR #2 sudah merged ke `master`.
-- Tag lokal `v0.1.0-beta.1` menunjuk merge commit `18c770b`.
-- Hermes aktif memakai provider `hermes-dual-memory`.
-- Gateway Hermes sedang berjalan saat audit 2026-07-29.
-- Plugin aktif belum sama dengan checkpoint: `answerability.py` belum terpasang;
-  `__init__.py`, `storage.py`, dan `plugin.yaml` berbeda.
-- Data runtime berada di `$HERMES_HOME/hermes-dual-memory/` dan mencakup SQLite,
-  Chroma, Mem0 history, serta skill drafts.
-
-**Implikasi**: jangan mulai menghitung hari beta. Deploy/restart/snapshot harus
-diselesaikan lebih dulu.
+- Tag remote `v0.1.0-beta.1` menunjuk merge commit `18c770b`.
+- Exact plugin checkpoint terpasang dan hash cocok pada profile `default` dan
+  `research`; kedua gateway aktif setelah controlled restart.
+- Data uji profile default dipindahkan ke snapshot privat; kedua profile mulai
+  dengan `0` hot turn, `0` shadow memory, `0` session, dan `0` message.
+- Persona default `Asa` dipulihkan selektif dari backup tervalidasi: `SOUL.md`
+  plus `asa-daily-checkin`, `asa-night-review`, dan `asa-deep-discussion`.
+- Profile `research` menjadi `Nellie`, memakai model `nellie-research`, provider
+  `hermes-dual-memory`, dan storage profile-scoped terpisah.
+- Clean-start snapshot code+data dua profile dibuat saat kedua gateway berhenti;
+  checksum dan archive integrity PASS.
+- Final serial 48-query regression PASS: recall `1.0`, abstention `1.0`, security
+  exclusion `1.0`, p50 `1386.666 ms`, p95 `1924.301 ms`.
+- System-2 real-stack smoke dengan runtime model `asa-complex` PASS. Beberapa
+  probe sebelumnya fail-closed saat respons semantic admission timeout/terpotong;
+  monitor bila berulang dalam task nyata.
 
 ## Active Configuration
 
 - Retrieval minimum score: default `0.55`, kecuali jurnal menyatakan override.
 - Answerability timeout: default `5s`, kecuali jurnal menyatakan override.
-- Provider aktif tunggal: `hermes-dual-memory`.
+- Provider aktif tunggal per profile: `hermes-dual-memory`.
+- Profile default: persona `Asa`, model `asa-complex`.
+- Profile research: persona `Nellie`, model `nellie-research`.
 - Baseline regression: schema v2, 48 query, overall `PASS`.
 
 ## Open Items
 
-1. Push tag `v0.1.0-beta.1` setelah approval manusia.
-2. Buat snapshot pre-beta saat gateway dihentikan terkontrol.
-3. Deploy exact plugin checkpoint ke profile aktif.
-4. Restart gateway dan verifikasi hash.
-5. Jalankan smoke test lalu catat tanggal mulai.
+1. Jalankan task nyata tanpa tuning config selama hari 1–7.
+2. Catat setiap sesi nyata dan observasi retrieval di `journal.md`.
+3. Monitor timeout/JSON invalid semantic admission; buka `BETA-NNN` jika berulang.
+4. Jalankan baseline comparison mingguan pertama pada akhir hari aktif ke-7.
+5. Merge PR dokumentasi beta #3 setelah review manusia.
 
 ## Runbook dan Ledger
 

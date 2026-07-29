@@ -1,7 +1,9 @@
 # Beta Preflight & Rollback Runbook
 
-Runbook ini belum dieksekusi. Jalankan saat maintenance window disetujui.
-Perintah diasumsikan dari root repo dan profile default `$HERMES_HOME=~/.hermes`.
+Runbook ini pertama kali dieksekusi pada `2026-07-29`; hasil aktual ada di
+`CURRENT.md`, `SNAPSHOT-MANIFEST.md`, dan `journal.md`. Perintah di bawah tetap
+menjadi referensi untuk profile default `$HERMES_HOME=~/.hermes`. Eksekusi awal
+juga memasukkan profile `research` sebagai profile terisolasi kedua.
 
 ## 1. Pre-check
 
@@ -21,15 +23,16 @@ Expected code checkpoint: `18c770bfdd0099cacc647de1f88259b8be8f9128`.
 ## 2. Maintenance Window
 
 Beritahu channel aktif bahwa gateway akan restart. Pastikan tidak ada task yang
-sedang diproses. Profile `research` berjalan terpisah; jangan hentikan atau ubah
-profile tersebut kecuali scope beta sengaja mencakupnya.
+sedang diproses. Profile `research` berjalan terpisah dan kini masuk scope beta;
+stop, snapshot, deploy, dan restart profile itu secara terkontrol bersama default.
 
 ```bash
-hermes gateway stop
-hermes gateway status
+systemctl --user stop hermes-gateway.service hermes-gateway-nellie.service
+systemctl --user is-active hermes-gateway.service
+systemctl --user is-active hermes-gateway-nellie.service
 ```
 
-Lanjut hanya bila default gateway benar-benar berhenti.
+Lanjut hanya bila seluruh gateway profile yang masuk scope benar-benar berhenti.
 
 ## 3. Snapshot Pre-Beta
 
@@ -45,10 +48,15 @@ tar --create --gzip \
   --file "$snapshot_root/hermes-dual-memory.tar.gz" \
   --directory "$HOME/.hermes" \
   hermes-dual-memory plugins/hermes-dual-memory
+tar --create --gzip \
+  --file "$snapshot_root/research-profile.tar.gz" \
+  --directory "$HOME/.hermes/profiles" \
+  research
 
 sha256sum \
   "$snapshot_root/hermes-full.zip" \
   "$snapshot_root/hermes-dual-memory.tar.gz" \
+  "$snapshot_root/research-profile.tar.gz" \
   > "$snapshot_root/SHA256SUMS"
 du -sh "$snapshot_root" > "$snapshot_root/SIZE.txt"
 ```
@@ -58,13 +66,16 @@ Jangan commit snapshot atau path privat. Salin nilai tersanitasi ke
 
 ## 4. Deploy Exact Beta Plugin
 
-Deployment memakai staging + rename agar tidak meninggalkan direktori parsial:
+Deployment memakai staging + rename agar tidak meninggalkan direktori parsial.
+Ulangi blok ini dengan `HERMES_HOME="$HOME/.hermes/profiles/research"` untuk
+profile research:
 
 ```bash
+HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 src="$PWD/plugins/memory/hermes-dual-memory"
-dst="$HOME/.hermes/plugins/hermes-dual-memory"
-stage="$HOME/.hermes/plugins/.hermes-dual-memory.beta-stage"
-previous="$HOME/.hermes/plugins/.hermes-dual-memory.pre-beta"
+dst="$HERMES_HOME/plugins/hermes-dual-memory"
+stage="$HERMES_HOME/plugins/.hermes-dual-memory.beta-stage"
+previous="$HERMES_HOME/plugins/.hermes-dual-memory.pre-beta"
 
 mkdir -p "$stage"
 cp -a "$src/." "$stage/"
@@ -88,7 +99,7 @@ for file in \
 do
   cmp \
     "plugins/memory/hermes-dual-memory/$file" \
-    "$HOME/.hermes/plugins/hermes-dual-memory/$file"
+    "$HERMES_HOME/plugins/hermes-dual-memory/$file"
 done
 ```
 
@@ -97,9 +108,11 @@ Semua `cmp` wajib exit `0`.
 ## 6. Restart & Smoke
 
 ```bash
-hermes gateway start
-hermes gateway status
-hermes config get memory.provider
+systemctl --user start hermes-gateway.service hermes-gateway-nellie.service
+systemctl --user is-active hermes-gateway.service
+systemctl --user is-active hermes-gateway-nellie.service
+HERMES_HOME="$HOME/.hermes" hermes config get memory.provider
+HERMES_HOME="$HOME/.hermes/profiles/research" hermes config get memory.provider
 ```
 
 Lakukan lima smoke task tersanitasi lewat Hermes:
@@ -136,10 +149,10 @@ Jika seluruh smoke PASS:
 
 ## Rollback Darurat
 
-Stop gateway lebih dulu:
+Stop seluruh gateway profile yang masuk scope lebih dulu:
 
 ```bash
-hermes gateway stop
+systemctl --user stop hermes-gateway.service hermes-gateway-nellie.service
 ```
 
 ### Rollback Deployment Saja
@@ -159,8 +172,8 @@ Untuk S0/S1 atau perubahan schema/vector/shadow:
 
 1. simpan snapshot incident baru bila aman;
 2. pindahkan direktori aktif ke lokasi karantina;
-3. extract `hermes-dual-memory.tar.gz` dari snapshot beta yang dipilih ke
-   `$HERMES_HOME`;
+3. extract archive profile-scoped dari snapshot beta yang dipilih ke setiap
+   `HERMES_HOME` yang berpasangan;
 4. deploy code dari tag `v0.1.0-beta.1` atau pre-beta plugin sesuai pasangan
    snapshot yang dipilih;
 5. jalankan SQLite integrity check;
