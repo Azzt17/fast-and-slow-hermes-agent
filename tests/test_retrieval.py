@@ -45,6 +45,119 @@ class RetrievalTest(unittest.TestCase):
             self.assertIn("Keputusan memakai SQLite", output)
             self.assertIn("</memori_lampau>", output)
             self.assertEqual(mem0.calls[0][1]["filters"], {"user_id": "default"})
+            self.assertEqual(mem0.calls[0][1]["top_k"], 5)
+            provider.shutdown()
+
+    def test_prefetch_caps_results_when_backend_ignores_top_k(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "memory": f"Result {index}",
+                        "metadata": {"status": "trusted"},
+                    }
+                    for index in range(8)
+                ]
+            }
+        )
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-cap",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=lambda **_: "",
+            )
+            output = provider.prefetch("return many")
+            self.assertEqual(output.count("<memori_lampau "), 5)
+            self.assertNotIn("Result 5", output)
+            provider.shutdown()
+
+    def test_prefetch_abstains_when_all_scores_are_below_threshold(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "memory": "Nearest but irrelevant memory.",
+                        "metadata": {"status": "trusted"},
+                        "score": 0.54,
+                    },
+                    {
+                        "memory": "Another irrelevant memory.",
+                        "metadata": {"status": "trusted"},
+                        "score": 0.31,
+                    },
+                ]
+            }
+        )
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-abstain",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=lambda **_: "",
+            )
+            self.assertEqual(provider.prefetch("unknown answer"), "")
+            provider.shutdown()
+
+    def test_prefetch_keeps_scores_at_threshold_and_legacy_missing_scores(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "memory": "Threshold memory.",
+                        "metadata": {"status": "trusted"},
+                        "score": 0.55,
+                    },
+                    {
+                        "memory": "Legacy result without score.",
+                        "metadata": {"status": "trusted"},
+                    },
+                ]
+            }
+        )
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-threshold",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=lambda **_: "",
+            )
+            output = provider.prefetch("threshold")
+            self.assertIn("Threshold memory.", output)
+            self.assertIn("Legacy result without score.", output)
+            provider.shutdown()
+
+    def test_prefetch_min_score_can_be_overridden(self):
+        mem0 = SearchMem0(
+            {
+                "results": [
+                    {
+                        "memory": "Moderate score memory.",
+                        "metadata": {"status": "trusted"},
+                        "score": 0.58,
+                    }
+                ]
+            }
+        )
+        module = load_provider_module()
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            "os.environ",
+            {"HERMES_DUAL_MEMORY_MIN_SCORE": "0.60"},
+        ):
+            provider = module.MemoryProvider()
+            provider.initialize(
+                "session-override",
+                hermes_home=tmp,
+                mem0_client=mem0,
+                llm_callable=lambda **_: "",
+            )
+            self.assertEqual(provider.prefetch("moderate"), "")
             provider.shutdown()
 
     def test_empty_search_is_clean(self):

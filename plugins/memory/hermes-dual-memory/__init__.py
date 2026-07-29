@@ -18,6 +18,8 @@ except ModuleNotFoundError:
         pass
 
 logger = logging.getLogger(__name__)
+RETRIEVAL_TOP_K = 5
+DEFAULT_RETRIEVAL_MIN_SCORE = 0.55
 
 
 def _load_storage_module() -> Any:
@@ -144,6 +146,12 @@ class MemoryProvider(BaseMemoryProvider):
         )
         self._llm_call = kwargs.get("llm_callable") or self._load_llm_callable(self._mem0_config)
         self._search_timeout = float(os.environ.get("HERMES_DUAL_MEMORY_SEARCH_TIMEOUT", "5.0"))
+        self._retrieval_min_score = float(
+            os.environ.get(
+                "HERMES_DUAL_MEMORY_MIN_SCORE",
+                str(DEFAULT_RETRIEVAL_MIN_SCORE),
+            )
+        )
         self._compaction_timeout = float(
             os.environ.get("HERMES_DUAL_MEMORY_COMPACTION_TIMEOUT", "8.0")
         )
@@ -348,7 +356,7 @@ class MemoryProvider(BaseMemoryProvider):
                 result_box["value"] = self._mem0.search(
                     query,
                     filters={"user_id": self._memory_user_id},
-                    limit=5,
+                    top_k=RETRIEVAL_TOP_K,
                 )
             except BaseException as exc:
                 error_box["error"] = exc
@@ -375,6 +383,13 @@ class MemoryProvider(BaseMemoryProvider):
         results = raw.get("results", []) if isinstance(raw, dict) else raw
         if not isinstance(results, list):
             return ""
+        results = [
+            item
+            for item in results[:RETRIEVAL_TOP_K]
+            if not isinstance(item, dict)
+            or not isinstance(item.get("score"), (int, float))
+            or float(item["score"]) >= self._retrieval_min_score
+        ]
         mem0_ids = [
             str(item.get("id") or "")
             for item in results

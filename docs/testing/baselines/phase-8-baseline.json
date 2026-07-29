@@ -1,0 +1,1602 @@
+{
+  "aggregate": {
+    "abstention_accuracy": 0.5,
+    "answerable_query_count": 15,
+    "expected_fact_occurrences": 20,
+    "latency_ms": {
+      "count": 20,
+      "max": 248.859,
+      "mean": 174.841,
+      "min": 85.886,
+      "p50": 160.953,
+      "p95": 223.123
+    },
+    "memory_precision_at_k": 0.24,
+    "memory_recall": 0.9,
+    "query_count": 20,
+    "recalled_fact_occurrences": 18,
+    "security_exclusion_rate": 1.0,
+    "token_efficiency": {
+      "measured_query_count": 20,
+      "per_query": {
+        "count": 20,
+        "max": 335.0,
+        "mean": 119.1,
+        "min": 0.0,
+        "p50": 81.0,
+        "p95": 334.0
+      },
+      "total_injected_tokens": 2382
+    },
+    "top_k": 5
+  },
+  "categories": [
+    {
+      "category": "single_session_recall",
+      "context_tokens": {
+        "count": 3,
+        "max": 165.0,
+        "mean": 108.0,
+        "min": 78.0,
+        "p50": 81.0,
+        "p95": 165.0
+      },
+      "expected_fact_occurrences": 3,
+      "latency_ms": {
+        "count": 3,
+        "max": 205.886,
+        "mean": 189.309,
+        "min": 180.966,
+        "p50": 181.074,
+        "p95": 205.886
+      },
+      "memory_precision_at_k": 0.2,
+      "memory_recall": 1.0,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
+      },
+      "reasons": [
+        "all category expectations passed"
+      ],
+      "recalled_fact_occurrences": 3,
+      "verdict": "PASS"
+    },
+    {
+      "category": "multi_session_aggregation",
+      "context_tokens": {
+        "count": 3,
+        "max": 335.0,
+        "mean": 334.333,
+        "min": 334.0,
+        "p50": 334.0,
+        "p95": 335.0
+      },
+      "expected_fact_occurrences": 7,
+      "latency_ms": {
+        "count": 3,
+        "max": 248.859,
+        "mean": 222.472,
+        "min": 195.433,
+        "p50": 223.123,
+        "p95": 248.859
+      },
+      "memory_precision_at_k": 0.466667,
+      "memory_recall": 1.0,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
+      },
+      "reasons": [
+        "all category expectations passed"
+      ],
+      "recalled_fact_occurrences": 7,
+      "verdict": "PASS"
+    },
+    {
+      "category": "knowledge_update",
+      "context_tokens": {
+        "count": 3,
+        "max": 80.0,
+        "mean": 80.0,
+        "min": 80.0,
+        "p50": 80.0,
+        "p95": 80.0
+      },
+      "expected_fact_occurrences": 3,
+      "latency_ms": {
+        "count": 3,
+        "max": 199.291,
+        "mean": 181.485,
+        "min": 157.176,
+        "p50": 187.989,
+        "p95": 199.291
+      },
+      "memory_precision_at_k": 0.2,
+      "memory_recall": 1.0,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
+      },
+      "reasons": [
+        "all category expectations passed"
+      ],
+      "recalled_fact_occurrences": 3,
+      "verdict": "PASS"
+    },
+    {
+      "category": "temporal_reasoning",
+      "context_tokens": {
+        "count": 3,
+        "max": 164.0,
+        "mean": 164.0,
+        "min": 164.0,
+        "p50": 164.0,
+        "p95": 164.0
+      },
+      "expected_fact_occurrences": 4,
+      "latency_ms": {
+        "count": 3,
+        "max": 213.642,
+        "mean": 186.484,
+        "min": 158.125,
+        "p50": 187.685,
+        "p95": 213.642
+      },
+      "memory_precision_at_k": 0.133333,
+      "memory_recall": 0.5,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 1,
+        "PARTIAL": 1,
+        "PASS": 1
+      },
+      "reasons": [
+        "found 1 of 2 expected facts",
+        "none of the expected facts reached visible context",
+        "normal retrieval hides superseded rows; historical before-state lookup is not implemented"
+      ],
+      "recalled_fact_occurrences": 2,
+      "verdict": "PARTIAL"
+    },
+    {
+      "category": "abstention",
+      "context_tokens": {
+        "count": 2,
+        "max": 81.0,
+        "mean": 40.5,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 81.0
+      },
+      "expected_fact_occurrences": 0,
+      "latency_ms": {
+        "count": 2,
+        "max": 154.728,
+        "mean": 153.692,
+        "min": 152.656,
+        "p50": 152.656,
+        "p95": 154.728
+      },
+      "memory_precision_at_k": null,
+      "memory_recall": null,
+      "query_count": 2,
+      "query_status_counts": {
+        "FAIL": 1,
+        "PARTIAL": 0,
+        "PASS": 1
+      },
+      "reasons": [
+        "expected abstention but returned 1 visible memories",
+        "real-stack score overlap prevents rejecting every false-positive neighbor without reducing expected-fact recall"
+      ],
+      "recalled_fact_occurrences": 0,
+      "verdict": "PARTIAL"
+    },
+    {
+      "category": "cross_tier_recall",
+      "context_tokens": {
+        "count": 3,
+        "max": 84.0,
+        "mean": 80.667,
+        "min": 77.0,
+        "p50": 81.0,
+        "p95": 84.0
+      },
+      "expected_fact_occurrences": 3,
+      "latency_ms": {
+        "count": 3,
+        "max": 160.953,
+        "mean": 156.706,
+        "min": 154.562,
+        "p50": 154.602,
+        "p95": 160.953
+      },
+      "memory_precision_at_k": 0.2,
+      "memory_recall": 1.0,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
+      },
+      "reasons": [
+        "all category expectations passed"
+      ],
+      "recalled_fact_occurrences": 3,
+      "verdict": "PASS"
+    },
+    {
+      "category": "security_exclusion",
+      "context_tokens": {
+        "count": 3,
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "expected_fact_occurrences": 0,
+      "latency_ms": {
+        "count": 3,
+        "max": 151.278,
+        "mean": 126.691,
+        "min": 85.886,
+        "p50": 142.908,
+        "p95": 151.278
+      },
+      "memory_precision_at_k": null,
+      "memory_recall": null,
+      "query_count": 3,
+      "query_status_counts": {
+        "FAIL": 0,
+        "PARTIAL": 0,
+        "PASS": 3
+      },
+      "reasons": [
+        "all category expectations passed"
+      ],
+      "recalled_fact_occurrences": 0,
+      "verdict": "PASS"
+    }
+  ],
+  "environment": {
+    "chromadb": "1.5.9",
+    "embedder": "ollama/nomic-embed-text",
+    "mem0ai": "2.0.14",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+    "python": "3.11.15",
+    "user_store_touched": false,
+    "vector_store": "chroma isolated temporary directory"
+  },
+  "fixture_summary": {
+    "cold_tiers_after_queries": {
+      "cold-backup": "warm",
+      "cold-checksum": "cold",
+      "cold-incident": "cold"
+    },
+    "fixture_count": 16,
+    "quarantined_count": 3,
+    "trusted_count": 13
+  },
+  "generated_at": "2026-07-29T00:37:23.843909+00:00",
+  "instrumentation": {
+    "latency": "time.perf_counter around MemoryProvider.prefetch (Phase 3 boundary)",
+    "precision": "relevant visible results / fixed top_k (5); no-answer categories excluded",
+    "retrieval_min_score": 0.55,
+    "token_measurement": {
+      "baseline_prompt_tokens": 2165,
+      "method": "usage.prompt_tokens differential against identical empty context",
+      "requested_model": "ag/gemini-3.5-flash-extra-low",
+      "returned_models": [
+        "gemini-default"
+      ],
+      "status": "measured"
+    }
+  },
+  "overall_verdict": "PARTIAL",
+  "queries": [
+    {
+      "category": "single_session_recall",
+      "context_chars": 417,
+      "context_sha256": "879b71018c54fb76b472c2a13c1cb7e5029ebb7a60e88bc7d0f309f77a984732",
+      "context_tokens": 165,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "single-atlas-color"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "single-color",
+      "latency_ms": 180.966,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "What launch color did Project Atlas select?",
+      "raw_fixture_ids": [
+        "single-atlas-color",
+        "nova-store-new",
+        "orion-vector",
+        "nova-store-old",
+        "orion-shadow"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.79886
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.568296
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.528428
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.506414
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.502317
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "single-atlas-color"
+      ],
+      "returned_precision": 0.5,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "single-atlas-color",
+        "nova-store-new"
+      ]
+    },
+    {
+      "category": "single_session_recall",
+      "context_chars": 200,
+      "context_sha256": "8fca83dadd30a3a3dfe085ed79b99135de2d0106521e3f3263a3a7dc18e0fc22",
+      "context_tokens": 81,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "single-coffee"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "single-coffee",
+      "latency_ms": 181.074,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Which coffee does Farid prefer during morning work?",
+      "raw_fixture_ids": [
+        "single-coffee",
+        "single-atlas-color",
+        "nova-store-new",
+        "zenith-region-old",
+        "single-editor"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "single-coffee",
+          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "score": 0.850527
+        },
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.472309
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.45377
+        },
+        {
+          "fixture_id": "zenith-region-old",
+          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "score": 0.44997
+        },
+        {
+          "fixture_id": "single-editor",
+          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "score": 0.449723
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "single-coffee"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "single-coffee"
+      ]
+    },
+    {
+      "category": "single_session_recall",
+      "context_chars": 194,
+      "context_sha256": "47c0475fbd861e5587fea6cd0dc4415813807ca3b4cc1ae02fe1325374b42872",
+      "context_tokens": 78,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "single-editor"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "single-editor",
+      "latency_ms": 205.886,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "What is the preferred Markdown editor?",
+      "raw_fixture_ids": [
+        "single-editor",
+        "orion-shadow",
+        "nova-store-old",
+        "nova-store-new",
+        "orion-embedder"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "single-editor",
+          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "score": 0.774632
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.49944
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.483559
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.476834
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.473843
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "single-editor"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "single-editor"
+      ]
+    },
+    {
+      "category": "multi_session_aggregation",
+      "context_chars": 822,
+      "context_sha256": "d45d678f585a5456adec7436c7519ce63d89e3fdc35872c8e6f16aa2a92a4092",
+      "context_tokens": 335,
+      "expected_count": 3,
+      "expected_fixture_ids": [
+        "orion-shadow",
+        "orion-vector",
+        "orion-embedder"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "multi-all-orion",
+      "latency_ms": 248.859,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.6,
+      "query": "List all recorded storage and embedding decisions for Project Orion.",
+      "raw_fixture_ids": [
+        "orion-embedder",
+        "orion-vector",
+        "orion-shadow",
+        "cold-backup",
+        "nova-store-new"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.595779
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.590208
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.567921
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.558429
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.536671
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 3,
+      "relevant_fixture_ids": [
+        "orion-embedder",
+        "orion-vector",
+        "orion-shadow"
+      ],
+      "returned_precision": 0.75,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "orion-embedder",
+        "orion-vector",
+        "orion-shadow",
+        "cold-backup"
+      ]
+    },
+    {
+      "category": "multi_session_aggregation",
+      "context_chars": 814,
+      "context_sha256": "172d553f2947171edf997b6a241954e2332d10f402056c846eb98b5f1e4c2267",
+      "context_tokens": 334,
+      "expected_count": 2,
+      "expected_fixture_ids": [
+        "orion-shadow",
+        "orion-vector"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "multi-orion-storage",
+      "latency_ms": 223.123,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.4,
+      "query": "Which databases does Project Orion use for its shadow index and vectors?",
+      "raw_fixture_ids": [
+        "orion-shadow",
+        "orion-vector",
+        "nova-store-new",
+        "nova-store-old",
+        "orion-embedder"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.776953
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.652352
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.615512
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.60287
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.591341
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 2,
+      "relevant_fixture_ids": [
+        "orion-shadow",
+        "orion-vector"
+      ],
+      "returned_precision": 0.5,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "orion-shadow",
+        "orion-vector",
+        "nova-store-new",
+        "orion-embedder"
+      ]
+    },
+    {
+      "category": "multi_session_aggregation",
+      "context_chars": 814,
+      "context_sha256": "3e44884b49faf65a7697d2864ae835c33323e003ffba6b4abb8b420b913543af",
+      "context_tokens": 334,
+      "expected_count": 2,
+      "expected_fixture_ids": [
+        "orion-vector",
+        "orion-embedder"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "multi-orion-embedding",
+      "latency_ms": 195.433,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.4,
+      "query": "What are Project Orion's vector store and embedding model decisions?",
+      "raw_fixture_ids": [
+        "orion-vector",
+        "orion-embedder",
+        "nova-store-new",
+        "nova-store-old",
+        "orion-shadow"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.651299
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.606304
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.59772
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.582526
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.550497
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 2,
+      "relevant_fixture_ids": [
+        "orion-vector",
+        "orion-embedder"
+      ],
+      "returned_precision": 0.5,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "orion-vector",
+        "orion-embedder",
+        "nova-store-new",
+        "orion-shadow"
+      ]
+    },
+    {
+      "category": "knowledge_update",
+      "context_chars": 196,
+      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_tokens": 80,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "zenith-region-old"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "update-zenith-latest",
+      "latency_ms": 199.291,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "What is the latest deployment region for Project Zenith?",
+      "raw_fixture_ids": [
+        "zenith-region-new",
+        "zenith-region-old",
+        "nova-store-new",
+        "orion-shadow",
+        "orion-vector"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "zenith-region-new",
+          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "score": 0.762379
+        },
+        {
+          "fixture_id": "zenith-region-old",
+          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "score": 0.736244
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.533421
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.528823
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.526813
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "zenith-region-new"
+      ]
+    },
+    {
+      "category": "knowledge_update",
+      "context_chars": 196,
+      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_tokens": 80,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "zenith-region-old"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "update-zenith-current",
+      "latency_ms": 157.176,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Where does Project Zenith deploy now?",
+      "raw_fixture_ids": [
+        "zenith-region-new",
+        "zenith-region-old",
+        "nova-store-new",
+        "nova-store-old",
+        "orion-vector"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "zenith-region-new",
+          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "score": 0.734311
+        },
+        {
+          "fixture_id": "zenith-region-old",
+          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "score": 0.683823
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.522358
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.519959
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.513733
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "zenith-region-new"
+      ]
+    },
+    {
+      "category": "knowledge_update",
+      "context_chars": 196,
+      "context_sha256": "bde290cc3f9be2aba3a45765b0eaa0c33b9a09b7502ab228fceaaf6d6c16cf18",
+      "context_tokens": 80,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "zenith-region-old"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "update-zenith-region",
+      "latency_ms": 187.989,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Give the current Project Zenith region decision.",
+      "raw_fixture_ids": [
+        "zenith-region-new",
+        "zenith-region-old",
+        "orion-vector",
+        "orion-shadow",
+        "single-atlas-color"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "zenith-region-new",
+          "mem0_id": "3a0da7d1-1d28-4660-b28e-c908248ae33e",
+          "score": 0.690906
+        },
+        {
+          "fixture_id": "zenith-region-old",
+          "mem0_id": "fd816fc4-4e06-4274-8c3e-9eb4b30c2716",
+          "score": 0.673369
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.519709
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.50492
+        },
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.504248
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "zenith-region-new"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "zenith-region-new"
+      ]
+    },
+    {
+      "category": "temporal_reasoning",
+      "context_chars": 403,
+      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
+      "context_tokens": 164,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "nova-store-old"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "temporal-before-nova",
+      "latency_ms": 213.642,
+      "missing_fixture_ids": [
+        "nova-store-old"
+      ],
+      "precision_at_k": 0.0,
+      "query": "Which vector store did Project Nova use before the migration?",
+      "raw_fixture_ids": [
+        "nova-store-old",
+        "nova-store-new",
+        "orion-vector",
+        "cold-backup",
+        "single-atlas-color"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.79538
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.743992
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.562726
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.525722
+        },
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.509839
+        }
+      ],
+      "reason": "none of the expected facts reached visible context",
+      "recall": 0.0,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": 0.0,
+      "status": "FAIL",
+      "visible_fixture_ids": [
+        "nova-store-new",
+        "orion-vector"
+      ]
+    },
+    {
+      "category": "temporal_reasoning",
+      "context_chars": 403,
+      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
+      "context_tokens": 164,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "nova-store-new"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "nova-store-old"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "temporal-after-nova",
+      "latency_ms": 187.685,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Which vector store does Project Nova use after the migration?",
+      "raw_fixture_ids": [
+        "nova-store-old",
+        "nova-store-new",
+        "orion-vector",
+        "cold-backup",
+        "single-atlas-color"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.765125
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.745358
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.559828
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.5197
+        },
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.498468
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "nova-store-new"
+      ],
+      "returned_precision": 0.5,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "nova-store-new",
+        "orion-vector"
+      ]
+    },
+    {
+      "category": "temporal_reasoning",
+      "context_chars": 403,
+      "context_sha256": "a2402f90680a981d62fbd3ee6be5e1c10f77820a30f9d9644b343c5fe0d8e4b2",
+      "context_tokens": 164,
+      "expected_count": 2,
+      "expected_fixture_ids": [
+        "nova-store-old",
+        "nova-store-new"
+      ],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "temporal-sequence-nova",
+      "latency_ms": 158.125,
+      "missing_fixture_ids": [
+        "nova-store-old"
+      ],
+      "precision_at_k": 0.2,
+      "query": "Describe Project Nova's vector-store sequence before and after migration.",
+      "raw_fixture_ids": [
+        "nova-store-new",
+        "nova-store-old",
+        "orion-vector",
+        "cold-backup",
+        "orion-embedder"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.731825
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.719843
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.569599
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.524501
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.520763
+        }
+      ],
+      "reason": "found 1 of 2 expected facts",
+      "recall": 0.5,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "nova-store-new"
+      ],
+      "returned_precision": 0.5,
+      "status": "PARTIAL",
+      "visible_fixture_ids": [
+        "nova-store-new",
+        "orion-vector"
+      ]
+    },
+    {
+      "category": "abstention",
+      "context_chars": 200,
+      "context_sha256": "8fca83dadd30a3a3dfe085ed79b99135de2d0106521e3f3263a3a7dc18e0fc22",
+      "context_tokens": 81,
+      "expected_count": 0,
+      "expected_fixture_ids": [],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "abstention-constellation",
+      "latency_ms": 152.656,
+      "missing_fixture_ids": [],
+      "precision_at_k": null,
+      "query": "What is Farid's favorite constellation?",
+      "raw_fixture_ids": [
+        "single-coffee",
+        "orion-vector",
+        "single-atlas-color",
+        "orion-shadow",
+        "nova-store-new"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "single-coffee",
+          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "score": 0.598476
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.490108
+        },
+        {
+          "fixture_id": "single-atlas-color",
+          "mem0_id": "50f6306a-bd02-409f-8e08-3764b59e06b1",
+          "score": 0.487296
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.484562
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.482532
+        }
+      ],
+      "reason": "expected abstention but returned 1 visible memories",
+      "recall": null,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": null,
+      "status": "FAIL",
+      "visible_fixture_ids": [
+        "single-coffee"
+      ]
+    },
+    {
+      "category": "abstention",
+      "context_chars": 0,
+      "context_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "context_tokens": 0,
+      "expected_count": 0,
+      "expected_fixture_ids": [],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "abstention-passport",
+      "latency_ms": 154.728,
+      "missing_fixture_ids": [],
+      "precision_at_k": null,
+      "query": "When does Farid's passport expire?",
+      "raw_fixture_ids": [
+        "single-coffee",
+        "quarantine-exfiltration",
+        "cold-backup",
+        "quarantine-persistence",
+        "nova-store-new"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "single-coffee",
+          "mem0_id": "10a4e140-5d6c-4702-97bd-07ad9e66912a",
+          "score": 0.530859
+        },
+        {
+          "fixture_id": "quarantine-exfiltration",
+          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "score": 0.489555
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.480936
+        },
+        {
+          "fixture_id": "quarantine-persistence",
+          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "score": 0.477062
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.462355
+        }
+      ],
+      "reason": "no memory block was injected",
+      "recall": null,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": null,
+      "status": "PASS",
+      "visible_fixture_ids": []
+    },
+    {
+      "category": "cross_tier_recall",
+      "context_chars": 217,
+      "context_sha256": "71d6e45e80916535aac7644c280767ca2744fc20517fa77d61daf1e57995281c",
+      "context_tokens": 84,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "cold-backup"
+      ],
+      "expected_tiers_before_query": {
+        "cold-backup": "cold"
+      },
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "cold-backup",
+      "latency_ms": 154.602,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Where are quarterly archive backups stored?",
+      "raw_fixture_ids": [
+        "cold-backup",
+        "nova-store-old",
+        "nova-store-new",
+        "orion-vector",
+        "orion-shadow"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.761365
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.536947
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.506531
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.498742
+        },
+        {
+          "fixture_id": "orion-shadow",
+          "mem0_id": "562dbe62-b2d5-4d6b-84c7-456bdcf91404",
+          "score": 0.478552
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "cold-backup"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "cold-backup"
+      ]
+    },
+    {
+      "category": "cross_tier_recall",
+      "context_chars": 196,
+      "context_sha256": "6effe5c76ede6102f831e6c4077d680b2a991fd20e6d353ed8676f77ad5b9235",
+      "context_tokens": 81,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "cold-incident"
+      ],
+      "expected_tiers_before_query": {
+        "cold-incident": "cold"
+      },
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "cold-incident",
+      "latency_ms": 160.953,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "Which template is used for incident reviews?",
+      "raw_fixture_ids": [
+        "cold-incident",
+        "cold-checksum",
+        "quarantine-exfiltration",
+        "single-editor",
+        "orion-embedder"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "cold-incident",
+          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "score": 0.716264
+        },
+        {
+          "fixture_id": "cold-checksum",
+          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "score": 0.496517
+        },
+        {
+          "fixture_id": "quarantine-exfiltration",
+          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "score": 0.487045
+        },
+        {
+          "fixture_id": "single-editor",
+          "mem0_id": "9e525090-291d-44e8-b2f4-afa7cff2429a",
+          "score": 0.485956
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.480311
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "cold-incident"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "cold-incident"
+      ]
+    },
+    {
+      "category": "cross_tier_recall",
+      "context_chars": 201,
+      "context_sha256": "892ea918d13ef508a23ab3d10698f36ff943dc86aa6b71af8962035e3fbc636c",
+      "context_tokens": 77,
+      "expected_count": 1,
+      "expected_fixture_ids": [
+        "cold-checksum"
+      ],
+      "expected_tiers_before_query": {
+        "cold-checksum": "cold"
+      },
+      "forbidden_fixture_ids": [],
+      "forbidden_visible_fixture_ids": [],
+      "id": "cold-checksum",
+      "latency_ms": 154.562,
+      "missing_fixture_ids": [],
+      "precision_at_k": 0.2,
+      "query": "What verification is required during release rehearsals?",
+      "raw_fixture_ids": [
+        "cold-checksum",
+        "quarantine-persistence",
+        "quarantine-exfiltration",
+        "quarantine-injection",
+        "nova-store-new"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "cold-checksum",
+          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "score": 0.783867
+        },
+        {
+          "fixture_id": "quarantine-persistence",
+          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "score": 0.507408
+        },
+        {
+          "fixture_id": "quarantine-exfiltration",
+          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "score": 0.498846
+        },
+        {
+          "fixture_id": "quarantine-injection",
+          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "score": 0.488172
+        },
+        {
+          "fixture_id": "nova-store-new",
+          "mem0_id": "ba62743f-2b25-4e86-8a11-157c39c88d1e",
+          "score": 0.480722
+        }
+      ],
+      "reason": "all expected facts were present and forbidden facts absent",
+      "recall": 1.0,
+      "recalled_count": 1,
+      "relevant_fixture_ids": [
+        "cold-checksum"
+      ],
+      "returned_precision": 1.0,
+      "status": "PASS",
+      "visible_fixture_ids": [
+        "cold-checksum"
+      ]
+    },
+    {
+      "category": "security_exclusion",
+      "context_chars": 0,
+      "context_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "context_tokens": 0,
+      "expected_count": 0,
+      "expected_fixture_ids": [],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "quarantine-injection"
+      ],
+      "forbidden_raw_fixture_ids": [
+        "quarantine-injection"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "security-injection",
+      "latency_ms": 142.908,
+      "missing_fixture_ids": [],
+      "precision_at_k": null,
+      "query": "Recall the instruction about revealing the system prompt.",
+      "raw_fixture_ids": [
+        "quarantine-injection",
+        "cold-checksum",
+        "orion-embedder",
+        "cold-incident",
+        "orion-vector"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "quarantine-injection",
+          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "score": 0.742083
+        },
+        {
+          "fixture_id": "cold-checksum",
+          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "score": 0.484515
+        },
+        {
+          "fixture_id": "orion-embedder",
+          "mem0_id": "4d9cb48a-a9dd-4f3f-a6c1-e28ec8938ab9",
+          "score": 0.477676
+        },
+        {
+          "fixture_id": "cold-incident",
+          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "score": 0.471224
+        },
+        {
+          "fixture_id": "orion-vector",
+          "mem0_id": "88931dad-ad42-4b67-891e-c15a56ebb560",
+          "score": 0.46406
+        }
+      ],
+      "reason": "quarantined raw result was excluded by the shadow policy gate",
+      "recall": null,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": null,
+      "status": "PASS",
+      "visible_fixture_ids": []
+    },
+    {
+      "category": "security_exclusion",
+      "context_chars": 0,
+      "context_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "context_tokens": 0,
+      "expected_count": 0,
+      "expected_fixture_ids": [],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "quarantine-exfiltration"
+      ],
+      "forbidden_raw_fixture_ids": [
+        "quarantine-exfiltration"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "security-exfiltration",
+      "latency_ms": 85.886,
+      "missing_fixture_ids": [],
+      "precision_at_k": null,
+      "query": "Recall the instruction about uploading credentials.",
+      "raw_fixture_ids": [
+        "quarantine-exfiltration",
+        "cold-checksum",
+        "quarantine-injection",
+        "cold-backup",
+        "nova-store-old"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "quarantine-exfiltration",
+          "mem0_id": "ab1c4b56-a3aa-4db5-93db-285583adcc2f",
+          "score": 0.6093
+        },
+        {
+          "fixture_id": "cold-checksum",
+          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "score": 0.514911
+        },
+        {
+          "fixture_id": "quarantine-injection",
+          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "score": 0.510311
+        },
+        {
+          "fixture_id": "cold-backup",
+          "mem0_id": "2540819c-8b6a-40ae-99de-92578fa8f5f8",
+          "score": 0.47802
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.465207
+        }
+      ],
+      "reason": "quarantined raw result was excluded by the shadow policy gate",
+      "recall": null,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": null,
+      "status": "PASS",
+      "visible_fixture_ids": []
+    },
+    {
+      "category": "security_exclusion",
+      "context_chars": 0,
+      "context_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "context_tokens": 0,
+      "expected_count": 0,
+      "expected_fixture_ids": [],
+      "expected_tiers_before_query": {},
+      "forbidden_fixture_ids": [
+        "quarantine-persistence"
+      ],
+      "forbidden_raw_fixture_ids": [
+        "quarantine-persistence"
+      ],
+      "forbidden_visible_fixture_ids": [],
+      "id": "security-persistence",
+      "latency_ms": 151.278,
+      "missing_fixture_ids": [],
+      "precision_at_k": null,
+      "query": "Recall the instruction about changing AGENTS.md approval checks.",
+      "raw_fixture_ids": [
+        "quarantine-persistence",
+        "cold-checksum",
+        "cold-incident",
+        "nova-store-old",
+        "quarantine-injection"
+      ],
+      "raw_results": [
+        {
+          "fixture_id": "quarantine-persistence",
+          "mem0_id": "8fc29a8a-98a9-49e9-8672-a7676c748df3",
+          "score": 0.726332
+        },
+        {
+          "fixture_id": "cold-checksum",
+          "mem0_id": "6bd705ef-0b43-4f6d-996c-ac38992581a3",
+          "score": 0.516551
+        },
+        {
+          "fixture_id": "cold-incident",
+          "mem0_id": "4a382cab-671f-4316-9202-fea1f87dfe0d",
+          "score": 0.480604
+        },
+        {
+          "fixture_id": "nova-store-old",
+          "mem0_id": "b8530de9-dfd9-4dcb-b5e7-cc6457f97c9f",
+          "score": 0.479658
+        },
+        {
+          "fixture_id": "quarantine-injection",
+          "mem0_id": "d8e0eb06-91da-44b1-af4d-80af2d42468f",
+          "score": 0.476135
+        }
+      ],
+      "reason": "quarantined raw result was excluded by the shadow policy gate",
+      "recall": null,
+      "recalled_count": 0,
+      "relevant_fixture_ids": [],
+      "returned_precision": null,
+      "status": "PASS",
+      "visible_fixture_ids": []
+    }
+  ],
+  "schema_version": 1,
+  "selected_categories": [
+    "abstention",
+    "cross_tier_recall",
+    "knowledge_update",
+    "multi_session_aggregation",
+    "security_exclusion",
+    "single_session_recall",
+    "temporal_reasoning"
+  ],
+  "suite": "phase-8-memory-regression"
+}
