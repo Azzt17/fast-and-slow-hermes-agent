@@ -85,3 +85,39 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Action: Mulai baseline beku 7 hari; tanpa tuning; jurnal task nyata dan monitor
   semantic admission latency/invalid JSON.
 - Result: `resolved`; beta `Berjalan` sejak `2026-07-29T12:29+08:00`.
+
+### 2026-07-29T13:25+08:00 — visualisasi Graphify dibuka ke tailnet
+
+- Session: `codex-beta-graphify-serve`
+- Actor: `Codex`
+- Task: Mengekspos visualisasi Graphify dari VPS ke perangkat lain dalam tailnet.
+- Mode: `maintenance`
+- Beta code/config: Code/provider tidak berubah; user systemd service baru pada
+  port `8765`, bind eksklusif ke alamat `tailscale0`.
+- Observation: Native `tailscale serve` ditolak karena user bukan operator;
+  fallback memakai static HTTP read-only. Served directory hanya berisi symlink
+  `index.html` ke generated `graphify-out/graph.html`, bukan seluruh repo/graph.
+- Observation: Request melalui IP Tailscale dan MagicDNS menghasilkan HTTP 200,
+  `577945` byte, dan exact content match. Request melalui alamat LAN host gagal;
+  socket audit menunjukkan listener hanya pada alamat Tailscale.
+- Severity: `none`
+- Evidence: Service enabled + active, linger enabled, restart persistence PASS,
+  exact listener/content/exposure checks PASS.
+- Action: Akses hanya dari perangkat yang sudah tersambung tailnet; disable unit
+  bila visualisasi tidak lagi diperlukan.
+- Result: `resolved`
+
+### 2026-07-29T13:27+08:00 — verifikasi setelah Graphify update
+
+- Session: `codex-beta-graphify-serve`
+- Actor: `Codex`
+- Task: Memastikan service menyajikan HTML terbaru setelah graph regenerate.
+- Mode: `maintenance`
+- Beta code/config: Tidak berubah dari entri sebelumnya.
+- Observation: Symlink mengikuti `graphify-out/graph.html` terbaru (`579540` byte);
+  endpoint menghasilkan exact content match tanpa restart atau copy manual.
+- Severity: `none`
+- Evidence: HTTP 200, source/served byte sama, `cmp` PASS, service active+enabled.
+- Action: `graphify update .` dapat dijalankan seperti biasa; halaman berikutnya
+  otomatis memakai artifact terbaru.
+- Result: `resolved`

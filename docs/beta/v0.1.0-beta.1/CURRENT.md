@@ -39,6 +39,8 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 - Profile default: persona `Asa`, model `asa-complex`.
 - Profile research: persona `Nellie`, model `nellie-research`.
 - Baseline regression: schema v2, 48 query, overall `PASS`.
+- Visualisasi Graphify: user service `graphify-visualization.service`, port
+  `8765`, bind eksklusif ke alamat `tailscale0`; hanya `graph.html` yang served.
 
 ## Open Items
 
@@ -47,6 +49,14 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 3. Monitor timeout/JSON invalid semantic admission; buka `BETA-NNN` jika berulang.
 4. Jalankan baseline comparison mingguan pertama pada akhir hari aktif ke-7.
 5. Merge PR dokumentasi beta #3 setelah review manusia.
+
+## Local Operations
+
+- Graphify status: `systemctl --user status graphify-visualization.service`
+- Graphify restart: `systemctl --user restart graphify-visualization.service`
+- Graphify disable: `systemctl --user disable --now graphify-visualization.service`
+- URL aktual memakai MagicDNS/IP Tailscale host pada port `8765`; alamat tidak
+  dicatat di repo agar metadata jaringan tetap lokal.
 
 ## Runbook dan Ledger
 
