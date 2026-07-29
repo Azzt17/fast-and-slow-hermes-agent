@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-29
+
+- [fase-8] menutup regression suite real-stack terisolasi untuk 20 query dalam tujuh kategori, memperbaiki retrieval Mem0 menjadi `top_k=5` plus cap lokal, dan menambahkan relevance threshold `0.55`. Baseline mencatat recall `90%`, precision@5 `24%`, latency p50/p95 `160.953/223.123 ms`, mean context `119.1` token/query, security exclusion `100%`, serta gap temporal reasoning dan abstention tetap `PARTIAL` apa adanya (ref ADR-0013).
+
 ## 2026-07-28
 
 - [fase-7] menutup procedural memory via Skills system: `new_skills` trusted diroute ke draft non-active dengan transisi candidate→pending/redundant, similarity gate memblokir duplikasi, approval CLI memakai validator/security writer native Hermes lalu menandai provenance agent-created untuk Curator. Sesi Hermes nyata 18 tool call menghasilkan draft, promosi `SKILL.md`, dan Curator memeriksa 69 skill tanpa error (ref ADR-0012).
