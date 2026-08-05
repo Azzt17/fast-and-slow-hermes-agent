@@ -886,3 +886,28 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Action: 2 baris gagal dibiarkan pending (fail-closed) sampai ada ADR/repro
   parser untuk batas new_skills; tidak paksa retry tanpa baseline.
 - Result: `done`
+
+### 2026-08-05T05:45+08:00 — Profile `coding` baru: Ada, partner teknik
+
+- Session: `nellie-setup-coding-profile`
+- Actor: `Nellie`
+- Task: Buat profile Hermes khusus coding (karena fix ADR-0023 terpaksa
+  ditangani profile research; ke depan task teknis dilimpahkan ke profile ini).
+- Mode: `controlled setup` (bukan destroy); profile baru, tidak menyentuh Asa/Nellie.
+- Beta code/config:
+  - `hermes profile create coding --no-skills`
+  - Model `codex-subagent` via provider custom 9router (model `codex` bare
+    adalah alias reserved openai-codex → hindari).
+  - Memory provider `hermes-dual-memory` (plugin ter-deploy, fix ADR-0023).
+  - Approvals mode `smart`.
+  - SOUL.md persona **Ada** (terinspirasi Ada Lovelace, programmer pertama
+    dunia) — sejajar dengan Asa (partner harian) dan Nellie (partner riset).
+  - 14 skill coding diinstal (Tier 1-3), termasuk `codex` untuk delegasi ke
+    Codex CLI yang sudah dikonfigurasi ke 9router.
+  - Dokumentasi lengkap di `docs/profile/coding-ada.md`.
+- Observation: profile coding berfungsi; System-1 dual-memory aktif; persona
+  Ada muncul di chat test; Codex CLI 0.145.0 terinstal dan ter-9router.
+- Severity: `S0` (setup tidak mengganggu beta; tidak ada data rusak).
+- Action: Profile coding siap dipakai; task pengembangan repo ke depan
+  diarahkan ke Ada.
+- Result: `done`

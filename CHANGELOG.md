@@ -4,6 +4,7 @@
 
 - [beta-0.1 hardening] menaikkan timeout konsolidasi System-2 dari 30s ke 90s dengan guard minimum 60s (ref ADR-0023). Diagnosis: profil research (Nellie) berhenti berkonsolidasi sejak 2026-07-31 karena `httpx.ReadTimeout` — timeout 30s berada tepat di p95 latensi (29.1s). Reproduksi pada 20 chunk mengonfirmasi 1 timeout pada payload kecil; rerun 21/21 chunk sukses setelah perbaikan, termasuk chunk yang makan 38.8s (bukti 30s terlalu ketat). Tambahan observability: kegagalan konsolidasi dicatat ke `maintenance_state.last_consolidation_error`. Regression suite 16 passed.
 - [beta-0.1 recovery] mengonsolidasikan 72/74 hot rows pending di profil research (sesi 07-30 s.d. 08-04) lewat script recovery yang meniru pipeline produksi dengan timeout 90s; `memory_index` naik 15 → 39 (trusted 25, quarantined 14). 2 baris gagal karena new_skills detail >1200 char (S2), dibiarkan pending fail-closed. Retrieval terverifikasi: trusted visible, quarantined ter-block.
+- [beta-0.1 setup] membuat profile Hermes `coding` (persona **Ada**, terinspirasi Ada Lovelace — programmer pertama dunia) sebagai partner teknik Farid, sejajar dengan Asa (harian) dan Nellie (riset). Model `codex-subagent` via 9router, memory provider `hermes-dual-memory`, approvals smart, 14 skill coding diinstal (Tier 1-3), dokumentasi di `docs/profile/coding-ada.md`.
 
 ## 2026-07-29
 
