@@ -28,11 +28,14 @@ stop, snapshot, deploy, dan restart profile itu secara terkontrol bersama defaul
 
 ```bash
 systemctl --user stop hermes-gateway.service hermes-gateway-nellie.service
-systemctl --user is-active hermes-gateway.service
-systemctl --user is-active hermes-gateway-nellie.service
+pgrep -af 'hermes_cli.main gateway run'
 ```
 
-Lanjut hanya bila seluruh gateway profile yang masuk scope benar-benar berhenti.
+`hermes-gateway.service` saat menerima `SIGTERM` dapat mencatat exit non-zero
+meski proses sudah berhenti bersih. Jangan gate memakai `is-active=inactive`.
+Lanjut hanya bila `pgrep` tidak menampilkan proses gateway dari profile yang
+masuk scope; status systemd `inactive` atau `failed` keduanya harus dikorelasikan
+dengan proses yang sudah tidak ada.
 
 ## 3. Snapshot Pre-Beta
 

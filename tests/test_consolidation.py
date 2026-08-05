@@ -25,7 +25,7 @@ class FakeMem0:
 
     def add(self, content, **kwargs):
         self.calls.append((content, kwargs))
-        return {"results": [{"id": "fake-memory-1"}]}
+        return {"results": [{"id": f"fake-memory-{len(self.calls)}"}]}
 
 
 class ConsolidationTest(unittest.TestCase):
@@ -114,6 +114,57 @@ class ConsolidationTest(unittest.TestCase):
             self.assertEqual(calls, 2)
             self.assertEqual(provider._store.pending_count("session-3"), 2)
             self.assertEqual(mem0.calls, [])
+
+    def test_long_session_is_consolidated_in_bounded_whole_turn_chunks(self):
+        mem0 = FakeMem0()
+        calls = []
+
+        def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            calls.append(kwargs["messages"])
+            return self.payload
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-long", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            for _ in range(4):
+                provider._store.add_turn("session-long", "x" * 3_000, role="user")
+            summary = provider.on_pre_compress([])
+            self.assertEqual(summary, "Hermes uses a dual memory provider")
+            self.assertEqual(provider._store.pending_count("session-long"), 0)
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(all(len(messages[1]["content"]) <= 6_800 for messages in calls))
+
+    def test_oversized_turn_remains_whole_in_its_own_chunk(self):
+        consolidation = self.module._consolidation
+        rows = [
+            {"content": "x" * 5_000},
+            {"content": "y" * 2_000},
+            {"content": "z" * 2_000},
+        ]
+        self.assertEqual([len(chunk) for chunk in consolidation.chunk_rows(rows)], [1, 2])
+
+    def test_failed_chunk_leaves_it_and_later_chunks_pending(self):
+        mem0 = FakeMem0()
+        calls = 0
+
+        def llm_call(**kwargs):
+            nonlocal calls
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            calls += 1
+            if calls <= 2:
+                return self.payload
+            raise TimeoutError("combo timeout")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-partial", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            for _ in range(7):
+                provider._store.add_turn("session-partial", "x" * 8_000, role="user")
+            self.assertEqual(provider.on_pre_compress([]), "")
+            self.assertEqual(provider._store.pending_count("session-partial"), 5)
 
     def test_new_skill_output_limits_are_enforced(self):
         consolidation = self.module._consolidation

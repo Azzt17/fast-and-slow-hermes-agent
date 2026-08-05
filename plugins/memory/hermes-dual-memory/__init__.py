@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
 import re
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, List, Dict
 
@@ -201,7 +203,16 @@ class MemoryProvider(BaseMemoryProvider):
             try:
                 from openai import OpenAI
 
-                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "30"))
+                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "90"))
+                # Guard: reject a misconfigured value that would reintroduce
+                # the flakiness this ADR resolves (see ADR-0023).
+                if timeout_seconds < 60:
+                    logger.warning(
+                        "HERMES_DUAL_MEMORY_LLM_TIMEOUT=%s below floor 60s; "
+                        "clamping to 60s (ADR-0023)",
+                        timeout_seconds,
+                    )
+                    timeout_seconds = 60.0
                 client = OpenAI(
                     api_key=llm_config["api_key"],
                     base_url=llm_config["openai_base_url"],
@@ -613,34 +624,58 @@ class MemoryProvider(BaseMemoryProvider):
                 session_id,
             )
             return None
-        try:
-            report = _consolidation.consolidate_once(
-                session_id=session_id,
-                rows=rows,
-                llm_call=self._llm_call,
-                mem0_client=self._mem0,
-                shadow_store=store,
-                admission_check=lambda content: _admission.evaluate_admission(
-                    content,
-                    llm_call=self._llm_call,
-                    timeout_seconds=self._admission_timeout,
-                ),
-                skill_router=lambda report: _procedural.route_new_skills(
-                    report=report,
+        reports: list[dict[str, Any]] = []
+        for chunk_number, chunk in enumerate(_consolidation.chunk_rows(rows), start=1):
+            try:
+                report = _consolidation.consolidate_once(
                     session_id=session_id,
-                    hermes_home=self._hermes_home,
-                ),
-                skill_finalizer=lambda drafts: _procedural.finalize_skill_drafts(
-                    drafts=drafts,
-                    hermes_home=self._hermes_home,
-                ),
-                user_id=self._memory_user_id,
-            )
-            store.mark_consolidated(session_id, [int(row["id"]) for row in rows])
-            return report
-        except Exception:
-            logger.exception("System-2 consolidation skipped for session %s", session_id)
-            return None
+                    rows=chunk,
+                    llm_call=self._llm_call,
+                    mem0_client=self._mem0,
+                    shadow_store=store,
+                    admission_check=lambda content: _admission.evaluate_admission(
+                        content,
+                        llm_call=self._llm_call,
+                        timeout_seconds=self._admission_timeout,
+                    ),
+                    skill_router=lambda report: _procedural.route_new_skills(
+                        report=report,
+                        session_id=session_id,
+                        hermes_home=self._hermes_home,
+                    ),
+                    skill_finalizer=lambda drafts: _procedural.finalize_skill_drafts(
+                        drafts=drafts,
+                        hermes_home=self._hermes_home,
+                    ),
+                    user_id=self._memory_user_id,
+                )
+            except Exception as exc:
+                logger.exception(
+                    "System-2 consolidation skipped for session %s chunk=%d", session_id, chunk_number
+                )
+                # Observability (ADR-0023): record the failure so it is not
+                # silent in the shadow database and can be monitored without
+                # digging through gateway logs.
+                try:
+                    store.set_maintenance_state(
+                        "last_consolidation_error",
+                        json.dumps(
+                            {
+                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "session_id": session_id,
+                                "chunk": chunk_number,
+                                "error_type": type(exc).__name__,
+                                "error": str(exc),
+                            },
+                            ensure_ascii=False,
+                        ),
+                    )
+                except Exception:
+                    logger.exception("Unable to record consolidation failure state")
+                return None
+            store.mark_consolidated(session_id, [int(row["id"]) for row in chunk])
+            reports.append(report)
+        return reports[-1] if reports else None
 
     def _run_maintenance(self, *, trigger: str, already_claimed: bool = False) -> None:
         store = self._store

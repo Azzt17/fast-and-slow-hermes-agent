@@ -117,6 +117,31 @@ CREATE TABLE IF NOT EXISTS memory_compaction_sources (
 )
 """
 
+IMPORT_BATCHES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS import_batches (
+    batch_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    rolled_back_at DATETIME
+)
+"""
+
+IMPORT_PROVENANCE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS memory_import_provenance (
+    idempotency_key TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL,
+    memory_index_id INTEGER NOT NULL UNIQUE,
+    candidate_id TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL,
+    temporal_visibility TEXT NOT NULL,
+    approved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES import_batches(batch_id),
+    FOREIGN KEY (memory_index_id) REFERENCES memory_index(id)
+)
+"""
+
 
 def resolve_hot_sessions_db_path(base_path: str | Path) -> Path:
     """Resolve the shared SQLite file used by this provider."""
@@ -233,6 +258,8 @@ class HotSessionStore:
             conn.execute(MEMORY_LIFECYCLE_EVENTS_SCHEMA)
             conn.execute(MEMORY_LIFECYCLE_EVENTS_INDEX)
             conn.execute(MEMORY_COMPACTION_SOURCES_SCHEMA)
+            conn.execute(IMPORT_BATCHES_SCHEMA)
+            conn.execute(IMPORT_PROVENANCE_SCHEMA)
             conn.execute(
                 """
                 UPDATE memory_index
@@ -535,6 +562,75 @@ class HotSessionStore:
                 )
             return memory_index_id
 
+    def record_import_provenance(
+        self,
+        *,
+        batch_id: str,
+        idempotency_key: str,
+        memory_index_id: int,
+        candidate_id: str,
+        source_path: str,
+        source_sha256: str,
+        temporal_visibility: str,
+    ) -> None:
+        if temporal_visibility not in ("current", "historical"):
+            raise ValueError("unsupported temporal visibility")
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO import_batches (batch_id, source, status) VALUES (?, ?, 'active')",
+                (batch_id, "obsidian-reviewed-import"),
+            )
+            conn.execute(
+                """
+                INSERT INTO memory_import_provenance (
+                    idempotency_key, batch_id, memory_index_id, candidate_id,
+                    source_path, source_sha256, temporal_visibility
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    idempotency_key, batch_id, memory_index_id, candidate_id,
+                    source_path, source_sha256, temporal_visibility,
+                ),
+            )
+
+    def import_provenance(self, idempotency_key: str) -> dict[str, object] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM memory_import_provenance WHERE idempotency_key = ?",
+                (idempotency_key,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def mark_import_historical(self, memory_index_id: int) -> None:
+        """Exclude a trusted import from current-state retrieval, preserving history."""
+        with self.connect() as conn:
+            conn.execute(
+                "UPDATE memory_index SET t_invalid = CURRENT_TIMESTAMP WHERE id = ?",
+                (memory_index_id,),
+            )
+
+    def rollback_import_batch(self, batch_id: str) -> int:
+        """Block one batch from retrieval while retaining immutable audit lineage."""
+        with self.connect() as conn:
+            result = conn.execute(
+                """
+                UPDATE memory_index
+                SET status = 'quarantined',
+                    flagged_reason = 'import_batch_rolled_back',
+                    t_invalid = CURRENT_TIMESTAMP
+                WHERE id IN (
+                    SELECT memory_index_id FROM memory_import_provenance
+                    WHERE batch_id = ?
+                ) AND status != 'quarantined'
+                """,
+                (batch_id,),
+            )
+            conn.execute(
+                "UPDATE import_batches SET status = 'rolled_back', rolled_back_at = CURRENT_TIMESTAMP WHERE batch_id = ?",
+                (batch_id,),
+            )
+            return int(result.rowcount)
+
     @staticmethod
     def _finalize_memory_in_connection(
         conn: sqlite3.Connection,
@@ -750,6 +846,18 @@ class HotSessionStore:
                 (key,),
             ).fetchone()
         return str(row["value"]) if row is not None else None
+
+    def set_maintenance_state(self, key: str, value: str) -> None:
+        """Upsert a maintenance_state key (used for failure observability)."""
+        with self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO maintenance_state (key, value)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
 
     def episodic_decay_candidates(self) -> list[dict[str, Any]]:
         """Return active trusted episodic shadows eligible for decay."""

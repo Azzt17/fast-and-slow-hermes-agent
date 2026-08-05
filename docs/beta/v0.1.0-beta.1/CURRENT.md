@@ -10,7 +10,7 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
 **Hari aktif / target**: `0 / 14`
 **Sesi nyata / target**: `0 / 30`
-**Severity tertinggi unresolved**: Tidak ada
+**Severity tertinggi unresolved**: S2 — malformed System-2 report chunk
 
 ## Temuan Preflight Saat Ini
 
@@ -30,6 +30,22 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 - System-2 real-stack smoke dengan runtime model `asa-complex` PASS. Beberapa
   probe sebelumnya fail-closed saat respons semantic admission timeout/terpotong;
   monitor bila berulang dalam task nyata.
+- BETA-011 dideploy hanya ke Asa/default: System-2 membatasi transcript menjadi
+  batch whole-turn 24.000 karakter untuk combo 9router; setiap batch sukses
+  ditandai sendiri, sisanya tetap pending saat failure. Profile research/Nellie
+  tidak diubah.
+- BETA-011 juga dideploy ke Nellie/research setelah snapshot privat dan baseline
+  subset PASS. Trigger legacy pada sesi terbesar default (104 turn) dan research
+  (46 turn) masih timeout dua kali per run; seluruh row tetap pending dan tidak
+  ada shadow memory baru.
+- BETA-013 dideploy ke kedua profile dengan budget combo 6.000 karakter. Legacy
+  default 104 turn dan research 46 turn selesai terkonsolidasi. Satu chunk pada
+  sesi default lain menolak `memory_type` invalid dan 11 hot turn tetap pending;
+  tidak ada unsafe write.
+- Local upstream Hermes gateway fix kini aktif pada kedua gateway: `/new` dan
+  `/reset` memanggil cached agent `commit_memory_session()` sebelum cleanup,
+  sehingga provider `on_session_end` dapat menerima boundary. Menunggu satu
+  verifikasi runtime `/new` pada default sebelum status integrasi ditutup.
 
 ## Active Configuration
 
@@ -43,6 +59,13 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
   `8765`, bind eksklusif ke alamat `tailscale0`; hanya `graph.html` yang served.
 - Telegram research: bot profile-scoped Nellie aktif dalam polling mode; token
   berbeda dari bot Asa dan allowlist terbatas pada user yang sama.
+- Static profile context mengikuti ADR-0017: canonical assets berada di
+  `profiles/`, telah dideploy byte-identik dengan mode `0600` ke default dan
+  research. Gateway aktif mempertahankan snapshot Core Memory saat ini; konteks
+  baru berlaku pada sesi berikutnya tanpa restart paksa.
+- ADR-0018 menghapus seluruh custom/personal `SKILL.md` yang dipreseed. Persona
+  dan Core Memory tetap aktif; kemampuan reusable baru harus melalui draft
+  procedural dan approval manusia. Skill native/hub tidak dipruning.
 
 ## Open Items
 
@@ -51,6 +74,28 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 3. Monitor timeout/JSON invalid semantic admission; buka `BETA-NNN` jika berulang.
 4. Jalankan baseline comparison mingguan pertama pada akhir hari aktif ke-7.
 5. Merge PR dokumentasi beta #3 setelah review manusia.
+6. Jalankan Pilot 0 manifest metadata-only Obsidian ke output privat, review
+   allowlist file dengan Farid, lalu putuskan apakah Pilot 1 semantic ledger
+   layak dimulai. Vector/shadow write tetap memerlukan snapshot dan baseline
+   comparison terpisah.
+7. Pilot 1 menyetujui empat kandidat natural; Pilot 2 design tersedia, tetapi
+   implementasi provenance/importer dan write batch tetap menunggu approval
+   eksplisit Farid serta pre-write snapshot/baseline PASS.
+8. Pilot 2 deployment ditunda: preflight gateway Asa mencapai state `failed`
+   sebelum snapshot/deploy. Kedua gateway telah pulih active; diagnosis baseline
+   gateway wajib PASS sebelum deployment atau import diulang.
+9. Pilot 2 plugin kini dideploy hanya ke Asa/default dengan schema provenance
+   kosong dan baseline subset PASS. Empat kandidat Pilot 1 belum diimpor;
+   execution tetap menunggu approval batch final Farid.
+10. Batch `obsidian-pilot2-batch-001` rollback fail-closed karena admission timeout
+    pada 2/4 kandidat; tidak ada memory baru visible. Jangan retry atau tuning
+    tanpa reproduksi, baseline comparison, dan review Farid.
+11. BETA-013 mengatasi timeout combo pada legacy run. Jangan retry 11 turn
+    pending dari session `20260729_145046_8b2bb955` tanpa ADR/repro parser,
+    baseline, snapshot, dan approval eksplisit Farid.
+12. Kirim `/new` di Asa/default lalu tunggu proses System-2; verifikasi hot
+    session sebelumnya berubah consolidated sebelum memperluas kesimpulan ke
+    seluruh lifecycle gateway.
 
 ## Local Operations
 

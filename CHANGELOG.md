@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-08-05
+
+- [beta-0.1 hardening] menaikkan timeout konsolidasi System-2 dari 30s ke 90s dengan guard minimum 60s (ref ADR-0023). Diagnosis: profil research (Nellie) berhenti berkonsolidasi sejak 2026-07-31 karena `httpx.ReadTimeout` — timeout 30s berada tepat di p95 latensi (29.1s). Reproduksi pada 20 chunk mengonfirmasi 1 timeout pada payload kecil; rerun 21/21 chunk sukses setelah perbaikan, termasuk chunk yang makan 38.8s (bukti 30s terlalu ketat). Tambahan observability: kegagalan konsolidasi dicatat ke `maintenance_state.last_consolidation_error`. Regression suite 16 passed.
+
 ## 2026-07-29
 
 - [beta-0.1] menetapkan checkpoint dogfooding `v0.1.0-beta.1` setelah Fase 8, protokol uji 21 hari/minimal 14 hari aktif dan 30 sesi nyata, rollback code+data, jurnal append-only, serta handoff wajib lintas-session sebelum Fase 9 (ref ADR-0016).

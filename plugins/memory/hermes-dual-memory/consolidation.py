@@ -22,6 +22,7 @@ REQUIRED_FIELDS = (
 MAX_NEW_SKILLS = 3
 MAX_SKILL_TITLE_CHARS = 80
 MAX_SKILL_DETAIL_CHARS = 1200
+MAX_TRANSCRIPT_CHARS = 6_000
 PROMPT_SYSTEM = (
     "Kamu adalah proses konsolidasi memori. Distilasi log mentah jadi entri "
     "terstruktur. Jangan tambahkan interpretasi yang tidak didukung teks. "
@@ -61,6 +62,30 @@ Hasilkan JSON dengan tepat field berikut:
         {"role": "system", "content": PROMPT_SYSTEM},
         {"role": "user", "content": user_prompt},
     ]
+
+
+def chunk_rows(
+    rows: list[Mapping[str, Any]], *, max_transcript_chars: int = MAX_TRANSCRIPT_CHARS
+) -> list[list[Mapping[str, Any]]]:
+    """Split ordered hot turns into bounded, whole-turn consolidation batches."""
+
+    if max_transcript_chars <= 0:
+        raise ValueError("max_transcript_chars must be positive")
+
+    chunks: list[list[Mapping[str, Any]]] = []
+    current: list[Mapping[str, Any]] = []
+    current_chars = 0
+    for row in rows:
+        row_chars = len(str(row.get("content", "")))
+        if current and current_chars + row_chars > max_transcript_chars:
+            chunks.append(current)
+            current = []
+            current_chars = 0
+        current.append(row)
+        current_chars += row_chars
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def _response_text(response: Any) -> str:
