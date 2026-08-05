@@ -864,3 +864,25 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Action: Deploy ke profil research (restart gateway) lalu verifikasi konsolidasi
   live pada sesi nyata berikutnya; pantau `maintenance_state.last_consolidation_error`.
 - Result: `implemented; runtime deployment pending`
+
+### 2026-08-05T05:20+08:00 — Recovery konsolidasi pending research (ADR-0023)
+
+- Session: `nellie-recovery-pending-consolidation`
+- Actor: `Nellie`
+- Task: Konsolidasikan sisa hot rows `consolidated=0` di profil research yang
+  menggantung sejak sebelum ADR-0023 (sesi 07-30, 07-31, 08-03, 08-04).
+- Mode: `controlled recovery via production consolidation pipeline`
+- Beta code/config: Script `scripts/recover_pending_consolidation.py` meniru
+  `_consolidate_locked` (chunk_rows 6000 char, consolidate_once, mark_consolidated
+  per-chunk-sukses). Memakai llm_call timeout 90s (ADR-0023), mem0 client sama,
+  user_id `default` agar konsisten retrieval. Snapshot data dibuat sebelum run.
+- Observation: 74 pending (5 sesi) -> 72 rows ter-consolidate, 2 gagal.
+  memory_index naik 15 -> 39 (trusted 25, quarantined 14). 2 baris gagal dari
+  sesi 20260731_151911_a1bc21d1 karena model memproduksi `new_skills` dengan
+  detail >1200 char (severity S2 yang sudah dikenal). Verifikasi retrieval
+  memakai mem0.search + join shadow index: trusted visible, quarantined
+  ter-block — memory yang di-recover dapat digunakan dengan benar.
+- Severity: `S2` (2 baris gagal parsial, bukan S0/S1 — tidak menghentikan beta).
+- Action: 2 baris gagal dibiarkan pending (fail-closed) sampai ada ADR/repro
+  parser untuk batas new_skills; tidak paksa retry tanpa baseline.
+- Result: `done`

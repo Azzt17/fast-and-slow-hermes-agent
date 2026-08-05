@@ -64,3 +64,25 @@ Perbaikan timeout 90s + guard 60s + observability kegagalan berhasil
 memulihkan konsolidasi System-2 pada profil research. 21/21 chunk sukses
 setelah perbaikan, termasuk chunk yang sebelumnya pasti timeout. Hot rows
 yang menggantung kini dapat dikonsolidasi oleh trigger berikutnya.
+
+## Recovery Konsolidasi Pending (2026-08-05)
+
+Sisa hot rows `consolidated=0` dari 5 sesi lama (07-30 s.d. 08-04) di-recover
+lewat `scripts/recover_pending_consolidation.py` (meniru `_consolidate_locked`,
+timeout 90s, snapshot data sebelum run):
+
+| Metrik | Nilai |
+|---|---|
+| Baris pending sebelum | 74 |
+| Baris ter-consolidate | **72** |
+| Baris gagal (tetap pending) | 2 |
+| memory_index sebelum/after | 15 → **39** |
+| trusted / quarantined | 25 / 14 |
+
+2 baris gagal berasal dari sesi `20260731_151911_a1bc21d1` karena model
+memproduksi `new_skills` dengan detail >1200 char (severity S2 yang sudah
+dikenal). Baris dibiarkan pending (fail-closed), tidak dipaksa retry.
+
+Verifikasi retrieval (`scripts/verify_recovered_retrieval.py`): mem0.search +
+join shadow index menampilkan memory `trusted` visible dan `quarantined`
+ter-block — memory yang di-recover dapat digunakan dengan benar.
