@@ -964,3 +964,39 @@ lokal `Asia/Shanghai` dan format ISO-8601.
   diperlukan agar sesi mendatang memakai env baru (belum dilakukan — sesi aktif
   sedang berjalan; ada peringatan rawan disconnect, jadwalkan saat idle).
 - Result: `done`
+
+### 2026-08-06T13:45+08:00 — Update penghitung beta: 8/14 hari aktif, 33/30 sesi nyata
+
+- Session: `20260806_125024_d76e6396`
+- Actor: `Ada`
+- Task: Perbarui metrik kemajuan di CURRENT.md yang sebelumnya masih `0/14` dan
+  `0/30` (tersisa dari preflight meski beta sudah berjalan).
+- Mode: `maintenance` (read-only kalkulasi dari DB produksi; tidak ada
+  perubahan code/config/data).
+- Observation: Dihitung dari `session_id` unik di hot_sessions tiga profile per
+  2026-08-06:
+  - default (HERMES_HOME global): 15 sesi, range 07-29 s/d 08-06, memory_index 48
+  - research: 12 sesi, range 07-29 s/d 08-06, memory_index 51
+  - coding: 6 sesi, range 08-05 s/d 08-06, memory_index 21
+  - Total 33 sesi nyata (target 30, sudah lampaui) atas 8 hari aktif unik
+    (07-29, 07-30, 07-31, 08-01, 08-03, 08-04, 08-05, 08-06; gap 08-02).
+- Catatan: angka ini merepresentasikan sesi dengan transaksi di hot_sessions
+  (System-1 aktif). Bisa undermeasure sesi yang belum tercatat DB, tapi ini
+  baseline konservatif dan terverifikasi dari sumber langsung.
+- Severity: `S3` (dokumentasi/UX; tidak memengaruhi correctness).
+- Action: CURRENT.md di-update; rollback drill ditunda sampai sesi test selesai
+  (per keputusan Farid) — jangan restore ke snapshot pre-recovery yang akan
+  membuang 21 memory coding yang sudah terkonsolidasi.
+- Result: `done`
+
+### 2026-08-06T16:45+08:00 — Laporan harian beta otomatis (script deterministik)
+
+- **Actor**: Ada (cron no_agent)
+- **Mode**: maintenance
+- **Metrik**: sesi nyata 33/30 ({'default': 15, 'research': 12, 'coding': 6}), hari aktif 8/14 (2026-07-29, 2026-07-30, 2026-07-31, 2026-08-01, 2026-08-03, 2026-08-04, 2026-08-05, 2026-08-06)
+- **Memory index**: {'default': 48, 'research': 55, 'coding': 25}; **pending consolidation**: {'default': 57, 'research': 2, 'coding': 0}
+- **Baseline (48 query)**: verdict=PARTIAL, recall=0.9, precision@k=0.24, p50=1653.36ms, p95=2350.044ms
+- **Drift vs baseline resmi**: {'latency_p50_ms': {'baseline': 1350.603, 'current': 1653.36, 'delta': 302.757, 'status': 'compared'}, 'latency_p95_ms': {'baseline': 1675.018, 'current': 2350.044, 'delta': 675.026, 'status': 'compared'}, 'mean_context_tokens': {'baseline': 37.125, 'current': None, 'delta': None, 'status': 'unavailable'}, 'memory_precision_at_k': {'baseline': 0.266667, 'current': 0.24, 'delta': -0.026667, 'status': 'compared'}, 'memory_recall': {'baseline': 1.0, 'current': 0.9, 'delta': -0.1, 'status': 'compared'}}
+- **Severity**: T3 (rutin, tidak ada S0/S1)
+- **Action**: update CURRENT.md + commit lokal
+- **Result**: sukses (script deterministik, tanpa LLM agent), tidak di-push

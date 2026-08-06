@@ -8,8 +8,8 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Branch dokumentasi**: `beta/0.1-dogfooding-docs`
 **Tanggal mulai**: `2026-07-29T12:29+08:00`
 **Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
-**Hari aktif / target**: `0 / 14`
-**Sesi nyata / target**: `0 / 30`
+**Hari aktif / target**: `8 / 14` (aktif 2026-07-29, 2026-07-30, 2026-07-31, 2026-08-01, 2026-08-03, 2026-08-04, 2026-08-05, 2026-08-06)
+**Sesi nyata / target**: `33 / 30` (default, research, coding — dihitung dari session_id unik di hot_sessions per hari ini)
 **Severity tertinggi unresolved**: S2 — malformed System-2 report chunk
 
 ## Temuan Preflight Saat Ini
@@ -81,18 +81,18 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 4. Jalankan baseline comparison mingguan pertama pada akhir hari aktif ke-7.
 5. Merge PR dokumentasi beta #3 setelah review manusia.
 6. Jalankan Pilot 0 manifest metadata-only Obsidian ke output privat, review
-   allowlist file dengan Farid, lalu putuskan apakah Pilot 1 semantic ledger
-   layak dimulai. Vector/shadow write tetap memerlukan snapshot dan baseline
-   comparison terpisah.
+  allowlist file dengan Farid, lalu putuskan apakah Pilot 1 semantic ledger
+  layak dimulai. Vector/shadow write tetap memerlukan snapshot dan baseline
+  comparison terpisah.
 7. Pilot 1 menyetujui empat kandidat natural; Pilot 2 design tersedia, tetapi
-   implementasi provenance/importer dan write batch tetap menunggu approval
-   eksplisit Farid serta pre-write snapshot/baseline PASS.
+  implementasi provenance/importer dan write batch tetap menunggu approval
+  eksplisit Farid serta pre-write snapshot/baseline PASS.
 8. Pilot 2 deployment ditunda: preflight gateway Asa mencapai state `failed`
-   sebelum snapshot/deploy. Kedua gateway telah pulih active; diagnosis baseline
-   gateway wajib PASS sebelum deployment atau import diulang.
+  sebelum snapshot/deploy. Kedua gateway telah pulih active; diagnosis baseline
+  gateway wajib PASS sebelum deployment atau import diulang.
 9. Pilot 2 plugin kini dideploy hanya ke Asa/default dengan schema provenance
-   kosong dan baseline subset PASS. Empat kandidat Pilot 1 belum diimpor;
-   execution tetap menunggu approval batch final Farid.
+  kosong dan baseline subset PASS. Empat kandidat Pilot 1 belum diimpor;
+  execution tetap menunggu approval batch final Farid.
 10. Batch `obsidian-pilot2-batch-001` rollback fail-closed karena admission timeout
     pada 2/4 kandidat; tidak ada memory baru visible. Jangan retry atau tuning
     tanpa reproduksi, baseline comparison, dan review Farid.
