@@ -8,6 +8,7 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Branch dokumentasi**: `beta/0.1-dogfooding-docs`
 **Tanggal mulai**: `2026-07-29T12:29+08:00`
 **Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
+**Countdown**: 13 hari tersisa ke target 08-19 (per 2026-08-06)
 **Hari aktif / target**: `8 / 14` (aktif 2026-07-29, 2026-07-30, 2026-07-31, 2026-08-01, 2026-08-03, 2026-08-04, 2026-08-05, 2026-08-06)
 **Sesi nyata / target**: `33 / 30` (default, research, coding — dihitung dari session_id unik di hot_sessions per hari ini)
 **Severity tertinggi unresolved**: S2 — malformed System-2 report chunk
@@ -131,3 +132,4 @@ Sebelum mengubah beta code/config/data:
 4. cek apakah gateway aktif sebelum snapshot/deploy;
 5. tambahkan journal entry sebelum dan sesudah perubahan;
 6. update file ini jika status, config, open item, atau rollback point berubah.
+
