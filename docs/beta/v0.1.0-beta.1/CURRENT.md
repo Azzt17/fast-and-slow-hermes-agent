@@ -46,6 +46,12 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
   `/reset` memanggil cached agent `commit_memory_session()` sebelum cleanup,
   sehingga provider `on_session_end` dapat menerima boundary. Menunggu satu
   verifikasi runtime `/new` pada default sebelum status integrasi ditutup.
+- Profile coding (Ada): konsolidasi System-2 selalu gagal sejak dibuat karena
+  model konsolidasi memakai fallback `provider.model` = `codex-subagent` yang
+  tak dapat dipanggil via 9router (`404 No active credentials for provider:
+  openai`). Fix: env `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low` di `.env` coding.
+  Recovery 56 pending via pipeline produksi sukses: memory_index 0 -> 21
+  (trusted 7, quarantined 14); live LLM smoke ke 9router pakai ada-low OK.
 
 ## Active Configuration
 
@@ -96,6 +102,9 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 12. Kirim `/new` di Asa/default lalu tunggu proses System-2; verifikasi hot
     session sebelumnya berubah consolidated sebelum memperluas kesimpulan ke
     seluruh lifecycle gateway.
+13. Restart gateway profile coding (saat idle) agar sesi mendatang memakai env
+    `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low`; sesi aktif sedang berjalan dan
+    recovery sudah dibereskan via script, jadi restart tidak mendesak.
 
 ## Local Operations
 

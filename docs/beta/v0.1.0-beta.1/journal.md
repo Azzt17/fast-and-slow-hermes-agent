@@ -911,3 +911,56 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Action: Profile coding siap dipakai; task pengembangan repo ke depan
   diarahkan ke Ada.
 - Result: `done`
+
+### 2026-08-06T13:05+08:00 — Fix model konsolidasi profile coding: codex-subagent → ada-low
+
+- Session: `20260806_125024_d76e6396`
+- Actor: `Ada`
+- Task: Diagnosa kenapa konsolidasi System-2 profile coding selalu gagal sejak
+  dibuat (0 memory_index, 0 lifecycle event, 56 hot rows pending).
+- Mode: `real` (sesi /new; boundary session terpicu dan dieksekusi).
+- Beta code/config: Tidak ada perubahan schema/code killer. Tambah env override
+  `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low` di `.env` profile coding. Ini menang di
+  `_default_mem0_config` (baris 271 `__init__.py`) menggantikan fallback
+  `provider.model` = `codex-subagent`.
+- Observation/root cause: `maintenance_state.last_consolidation_error` =
+  `NotFoundError 404 - No active credentials for provider: openai`. Empat
+  percobaan konsolidasi 12:42/12:43/12:50 semuanya crash di `consolidate_once →
+  llm_call`. Agent utama jalan (ada-high OK), tapi konsolidasi memakai
+  `codex-subagent` dari `provider.model` 9router — model itu tak dapat dipanggil
+  via endpoint OpenAI-compatible → proxy melempar `model_not_found`.
+  Verifikasi: (1) config resolution dengan env override → model `ada-low`,
+  base_url/api_key benar, llm_call valid; (2) live LLM call ke 9router pakai
+  ada-low → HTTP OK, model `gpt-5.6-luna`, JSON konsolidasi valid. 404 hilang.
+- Severity: `S2` (konsolidasi gagal berulang; bukan S0/S1).
+- Action: snapshot data dibuat sebelum perubahan (`.snapshot-pre-adalow-20260806_130035`,
+  452K, SQLite integrity `ok`, SHA tercatat). Terapkan env override, restart
+  gateway coding, lalu recovery 56 pending via pipeline produksi, verifikasi
+  memory_index naik dan retrieval berguna. Jangan retry tanpa baseline.
+- Result: `implemented; runtime deployment & recovery pending`
+
+
+### 2026-08-06T13:20+08:00 — Recovery pending consolidation profile coding (ada-low)
+
+- Session: `20260806_125024_d76e6396` (entri lanjutan)
+- Actor: `Ada`
+- Task: Konsolidasikan 56 hot rows pending profile coding setelah fix
+  `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low` diterapkan.
+- Mode: `controlled recovery via production consolidation pipeline`
+- Beta code/config: Script `scripts/recover_pending_consolidation_coding.py`
+  meniru `_consolidate_locked` (chunk_rows 6000 char, llm_call 90s, admission,
+  mem0.add, shadow record, mark_consolidated per-chunk-sukses). HERMES_HOME
+  menunjuk profile coding; memuat `.env` langsung dan memaksa model ada-low.
+  Snapshot data dibuat sebelum run (`.snapshot-pre-adalow-20260806_130035`).
+- Observation: 56/56 rows ter-consolidate, 0 gagal. memory_index 0 -> 21
+  (trusted 7, quarantined 14). Quarantine tinggi wajar: sebagian besar sesi
+  berisi instruksi operasional AGENTS.md/config yang di-block semantic admission
+  (sesuai desain fail-closed). Verifikasi retrieval memakai mem0.search + join
+  shadow index: trusted dan quarantined ter-label; pipeline quarantine bekerja.
+  Live LLM smoke ke 9router pakai ada-low: HTTP OK, model gpt-5.6-luna,
+  JSON valid — 404 "No active credentials for provider: openai" hilang.
+- Severity: `S2` (fix dan recovery; tidak ada S0/S1; tidak ada data rusak).
+- Action: update CURRENT.md (open item recovery ditutup). Restart gateway coding
+  diperlukan agar sesi mendatang memakai env baru (belum dilakukan — sesi aktif
+  sedang berjalan; ada peringatan rawan disconnect, jadwalkan saat idle).
+- Result: `done`
