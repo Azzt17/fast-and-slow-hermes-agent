@@ -131,6 +131,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._hermes_home: Path | None = None
         self._store: HotSessionStore | None = None
         self._sync_threads: list[threading.Thread] = []
+        self._sync_thread_sessions: dict[threading.Thread, str] = {}
         self._consolidation_threads: list[threading.Thread] = []
         self._sync_lock = threading.Lock()
         self._consolidation_lock = threading.Lock()
@@ -376,6 +377,12 @@ class MemoryProvider(BaseMemoryProvider):
         )
         with self._sync_lock:
             self._sync_threads = [t for t in self._sync_threads if t.is_alive()]
+            self._sync_thread_sessions = {
+                t: session
+                for t, session in self._sync_thread_sessions.items()
+                if t.is_alive()
+            }
+            self._sync_thread_sessions[thread] = target_session_id
             self._sync_threads.append(thread)
         thread.start()
 
@@ -720,9 +727,36 @@ class MemoryProvider(BaseMemoryProvider):
             self._maintenance_threads.append(thread)
         thread.start()
 
+    def _wait_for_sync(self, session_id: str, timeout: float = 2.0) -> None:
+        """Ensure the boundary sees all async writes for this session."""
+        with self._sync_lock:
+            threads = [
+                thread
+                for thread in self._sync_threads
+                if thread.is_alive()
+                and self._sync_thread_sessions.get(thread) == session_id
+            ]
+        for thread in threads:
+            thread.join(timeout=timeout)
+
     def _on_session_end_tasks(self, session_id: str) -> None:
+        self._wait_for_sync(session_id)
         self._consolidate(session_id, trigger="on_session_end")
         self._queue_maintenance(trigger="on_session_end")
+
+    def on_session_switch(
+        self,
+        new_session_id: str,
+        *,
+        parent_session_id: str = "",
+        reset: bool = False,
+        rewound: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Update provider scope when Hermes rotates the active session."""
+        del parent_session_id, reset, rewound, kwargs
+        self._wait_for_sync(self._session_id)
+        self._session_id = new_session_id
 
     def on_session_end(self, messages: List[Dict[str, Any]]) -> None:
         """Start idle consolidation in a daemon thread."""

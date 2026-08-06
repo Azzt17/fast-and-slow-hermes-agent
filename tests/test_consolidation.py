@@ -5,6 +5,7 @@ import json
 import tempfile
 import time
 import unittest
+import threading
 from pathlib import Path
 
 
@@ -93,6 +94,63 @@ class ConsolidationTest(unittest.TestCase):
                 time.sleep(0.01)
             self.assertEqual(provider._store.pending_count("session-2"), 0)
             self.assertTrue(any(thread.daemon for thread in provider._consolidation_threads))
+
+    def test_session_end_waits_for_async_sync_before_fetching_pending_rows(self):
+        mem0 = FakeMem0()
+        sync_started = threading.Event()
+        release_sync = threading.Event()
+
+        def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            return self.payload
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("race-session", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            original_add = provider._store.add_turn
+
+            def delayed_add(*args, **kwargs):
+                sync_started.set()
+                release_sync.wait(timeout=2)
+                return original_add(*args, **kwargs)
+
+            provider._store.add_turn = delayed_add
+            provider.sync_turn("user fact", "assistant acknowledgement")
+            self.assertTrue(sync_started.wait(timeout=1))
+            provider.on_session_end([])
+            time.sleep(0.05)
+            self.assertEqual(mem0.calls, [])
+            release_sync.set()
+            deadline = time.monotonic() + 2
+            while provider._store.pending_count("race-session") and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertEqual(provider._store.pending_count("race-session"), 0)
+            provider.shutdown()
+
+    def test_session_switch_updates_scope_after_prior_sync_finishes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("old-session", hermes_home=tmp, mem0_client=FakeMem0(), llm_callable=lambda **_: self.payload)
+            provider.on_session_switch("new-session", parent_session_id="old-session", reset=True)
+            self.assertEqual(provider._session_id, "new-session")
+
+    def test_session_end_does_not_wait_for_another_session_sync(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-a", hermes_home=tmp, mem0_client=FakeMem0(), llm_callable=lambda **_: self.payload)
+            provider.shutdown()
+            release = threading.Event()
+            unrelated = threading.Thread(target=lambda: release.wait(timeout=2))
+            provider._sync_threads = [unrelated]
+            provider._sync_thread_sessions[unrelated] = "session-b"
+            unrelated.start()
+            try:
+                provider._wait_for_sync("session-a", timeout=0.01)
+                self.assertTrue(unrelated.is_alive())
+            finally:
+                release.set()
+                unrelated.join(timeout=1)
 
     def test_invalid_report_does_not_mark_hot_rows(self):
         mem0 = FakeMem0()
