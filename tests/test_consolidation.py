@@ -243,6 +243,40 @@ class ConsolidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "detail cannot exceed 1200"):
             consolidation.parse_report(json.dumps(oversized))
 
+    def test_new_skill_output_limits_sanitize_drops_bad_items(self):
+        consolidation = self.module._consolidation
+        base = {
+            "summary": "Reusable procedure",
+            "new_skills": [],
+            "anomalies": [],
+            "entities": [],
+            "relations": [],
+            "memory_type": "episodic",
+            "importance_score": 5,
+        }
+        # Satu item valid + satu detail terlalu panjang → sanitize harus mempertahankan
+        # item valid dan drop yang buruk, bukan menggagalkan seluruh report.
+        mixed = dict(
+            base,
+            new_skills=[
+                {"title": "Good skill", "detail": "Short enough detail."},
+                {"title": "Bad skill", "detail": "x" * 1201},
+            ],
+        )
+        report = consolidation.parse_report(json.dumps(mixed), sanitize_new_skills=True)
+        self.assertEqual(len(report["new_skills"]), 1)
+        self.assertEqual(report["new_skills"][0]["title"], "Good skill")
+        # Tanpa flag, kontrak fail-closed tetap dipertahankan.
+        with self.assertRaisesRegex(ValueError, "detail cannot exceed 1200"):
+            consolidation.parse_report(json.dumps(mixed))
+        # Kuantitas berlebih juga disanitasi (drop ke MAX_NEW_SKILLS pertama).
+        too_many = dict(
+            base,
+            new_skills=[{"title": f"Skill {index}", "detail": "Do it."} for index in range(4)],
+        )
+        report = consolidation.parse_report(json.dumps(too_many), sanitize_new_skills=True)
+        self.assertEqual(len(report["new_skills"]), consolidation.MAX_NEW_SKILLS)
+
 
 if __name__ == "__main__":
     unittest.main()

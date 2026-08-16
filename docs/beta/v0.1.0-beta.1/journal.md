@@ -1062,3 +1062,19 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - **Severity**: T3 (rutin; tidak ada S0/S1)
 - **Action**: update CURRENT.md + commit lokal
 - **Result**: done
+
+### 2026-08-16T15:00+08:00 — Fix bug skill router (new_skills >1200 char) (ref B3, ADR-0024)
+
+- **Actor**: Ada
+- **Mode**: maintenance (produksi tidak terpengaruh — perbaikan code + deploy + recovery)
+- **Root cause**: `parse_report` melempar `ValueError` saat `new_skills[].detail > 1200` char → `consolidate_once` retry sekali → tetap gagal → `raise last_error` → **seluruh chunk (fakta + skill) dibuang**. Satu skill draft buruk memblokir konsolidasi fakta yang sah.
+- **Fix**: `consolidate_once` attempt terakhir memanggil `parse_report(sanitize_new_skills=True)` — drop item `new_skills` yang melanggar batas (kuantitas >3, title >80, detail >1200), lanjut konsolidasi fakta. Kontrak fail-closed `parse_report` (tanpa flag) **dipertahankan** + test.
+- **Test**: `test_new_skill_output_limits_sanitize_drops_bad_items` (baru) — 87/87 suite PASS.
+- **Deploy**: `consolidation.py` hash `52c5411b` ke 3 profile (default/research/coding) + backup `.pre-skillfix`.
+- **Recovery**: 4 rows yang sebelumnya terblokir kini terkonsolidasi trusted:
+  - default `20260815_140624` (2 rows, 37.9s)
+  - research `20260731_151911` (2 rows, 52.4s)
+- **Pending tersisa (semua wajar)**: legacy malformed `20260729_145046` default (11, item #11 butuh ADR parser), sesi aktif hari ini (default 10, research 2, coding 2 — akan konsolidasi saat boundary).
+- **Severity**: T3 (rutin; tidak ada S0/S1)
+- **Action**: update CURRENT.md + commit lokal + push (approval Farid)
+- **Result**: done

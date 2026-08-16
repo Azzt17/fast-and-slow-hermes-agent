@@ -105,8 +105,14 @@ def _response_text(response: Any) -> str:
     return ""
 
 
-def parse_report(raw: Any) -> dict[str, Any]:
-    """Parse and validate a §4.3 report."""
+def parse_report(raw: Any, sanitize_new_skills: bool = False) -> dict[str, Any]:
+    """Parse and validate a §4.3 report.
+
+    ``sanitize_new_skills=True`` drops offending ``new_skills`` items instead of
+    failing the whole report, so one oversized skill draft cannot block valid
+    fact consolidation. Guard rails remain: without this flag, oversized
+    ``new_skills`` raise ``ValueError`` (fail-closed, unchanged contract).
+    """
 
     text = _response_text(raw).strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
@@ -128,11 +134,23 @@ def parse_report(raw: Any) -> dict[str, Any]:
     ):
         raise ValueError("new_skills must be a list of non-empty {title, detail}")
     if len(report["new_skills"]) > MAX_NEW_SKILLS:
-        raise ValueError(f"new_skills cannot exceed {MAX_NEW_SKILLS} items")
+        if not sanitize_new_skills:
+            raise ValueError(f"new_skills cannot exceed {MAX_NEW_SKILLS} items")
+        report["new_skills"] = report["new_skills"][:MAX_NEW_SKILLS]
     if any(len(item["title"].strip()) > MAX_SKILL_TITLE_CHARS for item in report["new_skills"]):
-        raise ValueError(f"new_skills title cannot exceed {MAX_SKILL_TITLE_CHARS} characters")
+        if not sanitize_new_skills:
+            raise ValueError(f"new_skills title cannot exceed {MAX_SKILL_TITLE_CHARS} characters")
+        report["new_skills"] = [
+            item for item in report["new_skills"]
+            if len(item["title"].strip()) <= MAX_SKILL_TITLE_CHARS
+        ]
     if any(len(item["detail"].strip()) > MAX_SKILL_DETAIL_CHARS for item in report["new_skills"]):
-        raise ValueError(f"new_skills detail cannot exceed {MAX_SKILL_DETAIL_CHARS} characters")
+        if not sanitize_new_skills:
+            raise ValueError(f"new_skills detail cannot exceed {MAX_SKILL_DETAIL_CHARS} characters")
+        report["new_skills"] = [
+            item for item in report["new_skills"]
+            if len(item["detail"].strip()) <= MAX_SKILL_DETAIL_CHARS
+        ]
     report["new_skills"] = [
         {"title": item["title"].strip(), "detail": item["detail"].strip()}
         for item in report["new_skills"]
@@ -268,6 +286,7 @@ def consolidate_once(
     messages = build_prompt(session_id, rows)
     report: dict[str, Any] | None = None
     last_error: Exception | None = None
+    response: Any = None
     attempt_messages = messages
     for attempt in range(2):
         try:
@@ -295,7 +314,19 @@ def consolidate_once(
                     }
                 ]
             else:
-                logger.exception("Consolidation failed for session %s", session_id)
+                # Attempt terakhir: coba sanitasi report — jika satu new_skills
+                # melanggar batas (title/detail/kuantitas), drop item itu saja dan
+                # lanjut konsolidasi fakta. Fakta sah tidak boleh ikut dibuang karena
+                # satu skill draft buruk (esensi: supersede, jangan hapus).
+                logger.warning(
+                    "Consolidation retry failed (%s); attempting sanitize of new_skills", exc
+                )
+                try:
+                    report = parse_report(response, sanitize_new_skills=True)
+                    last_error = None
+                except Exception as sanitize_exc:
+                    logger.warning("Sanitize new_skills also failed: %s", sanitize_exc)
+                    report = None
     if report is None:
         assert last_error is not None
         raise last_error

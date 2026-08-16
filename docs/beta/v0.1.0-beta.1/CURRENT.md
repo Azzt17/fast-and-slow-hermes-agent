@@ -123,6 +123,11 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
     Sisa wajar: legacy malformed `20260729_145046` (11, item #11), skill-detail
     `20260815_140624`/`20260731_151911` (4, bug skill router draft >1200 char),
     sesi aktif hari ini (12). Open item baru: perbaiki skill router.
+17. Fix bug skill router: ✅ SELESAI 2026-08-16. `parse_report(sanitize_new_skills=True)`
+    drop item `new_skills` melanggar batas, lanjut konsolidasi fakta (kontrak
+    fail-closed tanpa flag dipertahankan). Deploy hash `52c5411b` 3 profile;
+    recovery 4 rows terblokir kini trusted. Pending tersisa = legacy malformed
+    (11, item #11) + sesi aktif (wajar).
 
 ## Local Operations
 
