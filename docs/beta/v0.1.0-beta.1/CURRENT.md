@@ -12,6 +12,7 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Hari aktif / target**: `14 / 14` ✅ (per 2026-08-16; dihitung dari session_id unik lintas 3 profile)
 **Sesi nyata / target**: `>33 / 30` ✅ (target sudah terlampaui per 08-06; data terbaru menyusul)
 **Rollback drill**: ✅ PASS 2026-08-16 (sandbox clone profile research — produksi tidak tersentuh)
+**Baseline mingguan ke-2**: ✅ PASS 2026-08-16 (recall 1.0, precision 0.2667, p50 1285ms, p95 2075ms — membaik vs 08-06 PARTIAL)
 **Severity tertinggi unresolved**: S2 — malformed System-2 report chunk (open item #11)
 
 ## Temuan Preflight Saat Ini
@@ -116,6 +117,12 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
     recovery sudah dibereskan via script, jadi restart tidak mendesak.
 14. Rollback drill: ✅ SELESAI 2026-08-16 (sandbox clone research, PASS). Item
     exit criteria ini tertutup.
+15. Baseline mingguan ke-2: ✅ SELESAI 2026-08-16 (PASS, recall 1.0, p95 2075ms).
+    Drift p95 +399ms vs baseline resmi — membaik drastis dari +675ms (08-06).
+16. Recovery pending: 60 rows terkonsolidasi (default 22, research 36, coding 2).
+    Sisa wajar: legacy malformed `20260729_145046` (11, item #11), skill-detail
+    `20260815_140624`/`20260731_151911` (4, bug skill router draft >1200 char),
+    sesi aktif hari ini (12). Open item baru: perbaiki skill router.
 
 ## Local Operations
 

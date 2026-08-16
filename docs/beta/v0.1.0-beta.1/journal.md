@@ -1041,3 +1041,24 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Severity: `S3` (drill sandbox; tidak ada perubahan produksi; exit criteria terpenuhi).
 - Action: CURRENT.md di-update (exit criteria rollback drill = PASS). Commit lokal menyusul.
 - Result: `done`
+
+### 2026-08-16T14:45+08:00 — Baseline mingguan ke-2 (A2) + Recovery pending (A3)
+
+- **Actor**: Ada
+- **Mode**: maintenance (drill aman — tidak menyentuh produksi)
+- **A2 — Baseline mingguan ke-2 (48 query)**:
+  - Verdict: **PASS** (vs 08-06 PARTIAL, 07-29 PASS)
+  - Recall 1.0 (pulih dari 0.9), precision@k 0.2667 (pulih dari 0.24)
+  - p50 1285.1ms (membaik dari 1653.4; baseline 1350.6), p95 2074.6ms (membaik dari 2350.0; baseline 1675.0 — drift +399ms)
+  - 7/7 kategori PASS; hasil tersimpan `docs/testing/baselines/phase-8-baseline-2026-08-16.json`
+- **A3 — Recovery pending consolidation (60 rows)**:
+  - default: 39→23 pending (22 rows trusted; sisa: legacy malformed `20260729_145046` 11, skill-detail `20260815_140624` 2, sesi aktif 08-16 10)
+  - research: 32→4 pending (36 rows dari `20260806_161048` tuntas; sisa: skill-detail `20260731_151911` 2, sesi aktif 2)
+  - coding: 4→0 pending (2 rows recovered setelah fix env `.env`)
+  - mem_index naik: default 75→84, research 56→63, coding 35→38
+- **Temuan**:
+  - `ValueError: new_skills detail cannot exceed 1200 characters` di 2 sesi — bug skill router (draft >1200 char), bukan konsolidasi; data aman, perlu perbaikan router (open item baru)
+  - Root cause 404 recovery coding = script tidak memuat `.env` in-process; diperbaiki `recover_stranded_pending.py` (muat `.env` profile sebelum resolve config). Pelajaran: script recovery wajib muat `.env` (pola referensi consolidation-model-and-recovery).
+- **Severity**: T3 (rutin; tidak ada S0/S1)
+- **Action**: update CURRENT.md + commit lokal
+- **Result**: done
