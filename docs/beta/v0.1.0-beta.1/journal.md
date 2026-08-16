@@ -1001,6 +1001,20 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - **Action**: update CURRENT.md + commit lokal
 - **Result**: sukses (script deterministik, tanpa LLM agent), tidak di-push
 
+### 2026-08-07 — Gap jurnal diisi (B1): rekonstruksi tersanitasi
+
+- **Actor**: Ada (rekonstruksi dari hot_sessions + session DB; isi mentah tidak disalin)
+- **Mode**: documentation (append-only; entri ini mengisi gap 08-07..08-15 yang kosong)
+- **08-07** (default, sesi `20260805_204940_…`, 8 rows, 04:05–05:28 WITA): sesi lanjutan — analisis repo dual-memory terhadap Hermes runtime (lanjutan investigasi 08-05: perbandingan desain vs implementasi, gap System-1 prefetch).
+- **08-09** (default, sesi `20260808_010346_…`, 8 rows, 02:45–03:27 WITA): sesi lanjutan — diskusi arsitektur konsolidasi / System-2 (lanjutan analisis dual-memory).
+- **08-13** (coding, sesi `20260806_125024_…`, 6 rows, 10:11–10:23 WITA): **analisis app kasir/POS** — perbandingan arsitektur full-online vs offline-first vs sync-manual; rekomendasi backend: SQLite lokal dulu → Supabase/Postgres hub saat multi-device → Firebase hanya jika semua online (kebutuhan POS/laba-rugi/stok = relational).
+- **08-14** (default 2 sesi + research 1 sesi, 23:28–23:59 WITA): sesi malam — aktivitas default (lanjutan diskusi) + research (sesi panjang `20260806_161048_…` masih aktif).
+- **08-15** (default 5 sesi + research 1 + coding 2): **hari migrasi finance tracker** — sesi besar `20260815_072209_…` (28 rows, 00:00–14:12 WITA): investigasi app finance tracker lama (container mati), keputusan bangun CLI `fin` single-user SQLite, migrasi 52 transaksi (Rp3.074.501), arsip stack lama Go multi-user ke `_archive/`; plus sesi coding `20260815_220233_…` (awal sesi ini — "Menyederhanakan Pencatatan Keuangan Pribadi").
+- **Catatan**: entri ini adalah rekonstruksi tersanitasi dari metadadata sesi (hot_sessions + session DB), bukan isi percakapan mentah. Tujuan: mengisi jejak audit beta yang kosong tanpa membocorkan isi percakapan pribadi.
+- **Severity**: T3 (dokumentasi)
+- **Action**: insert kronologis di jurnal
+- **Result**: done
+
 ### 2026-08-16T10:30+08:00 — Kompatibilitas Hermes Herald (ADR-0024): agent_context filter, backup_paths, on_memory_write audit, parent lineage
 
 - Session: `20260816_091939_f555d9d6` (default) + sesi coding aktif
@@ -1077,4 +1091,24 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - **Pending tersisa (semua wajar)**: legacy malformed `20260729_145046` default (11, item #11 butuh ADR parser), sesi aktif hari ini (default 10, research 2, coding 2 — akan konsolidasi saat boundary).
 - **Severity**: T3 (rutin; tidak ada S0/S1)
 - **Action**: update CURRENT.md + commit lokal + push (approval Farid)
+- **Result**: done
+
+### 2026-08-16T15:30+08:00 — Item #11 tertutup + prep penutupan beta (B2, B3)
+
+- **Actor**: Ada
+- **Mode**: maintenance + dokumentasi
+- **B2 — Item #11 (11 rows pending `20260729_145046_8b2bb955`) TERTUTUP**:
+  - **Koreksi diagnosis**: bukan "malformed `memory_type`" seperti open item lama — semua rows valid (role/timestamp/content normal). Sesi perdana dual-memory (29 Jul, hari pertama beta) terkonsolidasi 4 chunk pertama, lalu **berhenti sebelum memproses 11 rows terakhir** (10:27–10:41 WITA, topik SeRasi + Obsidian vault + Codex step-by-step). `maintenance_state` hanya punya `last_decay_run` — konsolidasi gagal **sebelum** fitur pencatatan error ditambahkan, jadi tidak ada jejak error.
+  - **Recovery**: 11 rows → **9 trusted + 2 quarantined** (chunk 2 berisi topik campuran, admission wajar). mem_index default 85→87.
+  - **Implikasi**: tidak perlu ADR parser; tidak perlu keputusan fail-closed. Item #11 ditutup sebagai "bukan malformed, hanya belum diproses".
+- **B3 — Metrik akhir beta (per 2026-08-16, dari hot_sessions 3 profile)**:
+  - Hari aktif: **14/14** (07-29..08-16; gap 08-02, 08-08, 08-10-12) — target tercapai
+  - Sesi unik: **49/30** (default 27, research 14, coding 8) — target terlampaui
+  - Memory index: **190** records (trusted 124, quarantined 66)
+  - Pending tersisa: 12 — semua sesi aktif hari ini (belum boundary; wajar)
+  - Baseline 08-16: PASS (recall 1.0, p95 2075ms)
+  - Rollback drill: PASS (sandbox clone research)
+  - Test suite: 87/87 PASS; hash plugin deployed == repo (3 file × 3 profile)
+- **Severity**: T3 (dokumentasi + recovery rutin)
+- **Action**: update CURRENT.md + draft ringkasan penutupan + commit + push
 - **Result**: done

@@ -9,11 +9,12 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Tanggal mulai**: `2026-07-29T12:29+08:00`
 **Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
 **Countdown**: 3 hari tersisa ke target 08-19 (per 2026-08-16)
-**Hari aktif / target**: `14 / 14` ✅ (per 2026-08-16; dihitung dari session_id unik lintas 3 profile)
-**Sesi nyata / target**: `>33 / 30` ✅ (target sudah terlampaui per 08-06; data terbaru menyusul)
+**Hari aktif / target**: `14 / 14` ✅ (per 2026-08-16; dihitung dari timestamp hot_sessions lintas 3 profile — gap 08-02, 08-08, 08-10-12)
+**Sesi nyata / target**: `49 / 30` ✅ (per 2026-08-16; default 27, research 14, coding 8)
+**Memory index**: `190` records (trusted 124, quarantined 66); pending tersisa 12 (semua sesi aktif hari ini — wajar)
 **Rollback drill**: ✅ PASS 2026-08-16 (sandbox clone profile research — produksi tidak tersentuh)
 **Baseline mingguan ke-2**: ✅ PASS 2026-08-16 (recall 1.0, precision 0.2667, p50 1285ms, p95 2075ms — membaik vs 08-06 PARTIAL)
-**Severity tertinggi unresolved**: S2 — malformed System-2 report chunk (open item #11)
+**Severity tertinggi unresolved**: T3 — tidak ada S0/S1/S2 tersisa; semua open item material sudah ditutup per 2026-08-16
 
 ## Temuan Preflight Saat Ini
 
@@ -128,6 +129,13 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
     fail-closed tanpa flag dipertahankan). Deploy hash `52c5411b` 3 profile;
     recovery 4 rows terblokir kini trusted. Pending tersisa = legacy malformed
     (11, item #11) + sesi aktif (wajar).
+18. Gap jurnal 08-07..08-15 (B1): ✅ SELESAI 2026-08-16 — entri rekonstruksi
+    tersanitasi (5 hari: 08-07, 09, 13, 14, 15) di-insert kronologis.
+19. Item #11 (B2): ✅ TERTUTUP 2026-08-16 — koreksi diagnosis: 11 rows
+    `20260729_145046_8b2bb955` BUKAN malformed (semua valid); hanya belum
+    diproses (konsolidasi berhenti sebelum chunk terakhir, era plugin awal
+    tanpa jejak error). Recovery: 9 trusted + 2 quarantined. Tidak perlu
+    ADR parser / keputusan fail-closed.
 
 ## Local Operations
 
