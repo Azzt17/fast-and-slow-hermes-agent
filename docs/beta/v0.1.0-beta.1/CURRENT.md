@@ -11,6 +11,7 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 **Countdown**: 3 hari tersisa ke target 08-19 (per 2026-08-16)
 **Hari aktif / target**: `14 / 14` ✅ (per 2026-08-16; dihitung dari session_id unik lintas 3 profile)
 **Sesi nyata / target**: `>33 / 30` ✅ (target sudah terlampaui per 08-06; data terbaru menyusul)
+**Rollback drill**: ✅ PASS 2026-08-16 (sandbox clone profile research — produksi tidak tersentuh)
 **Severity tertinggi unresolved**: S2 — malformed System-2 report chunk (open item #11)
 
 ## Temuan Preflight Saat Ini
@@ -113,6 +114,8 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 13. Restart gateway profile coding (saat idle) agar sesi mendatang memakai env
     `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low`; sesi aktif sedang berjalan dan
     recovery sudah dibereskan via script, jadi restart tidak mendesak.
+14. Rollback drill: ✅ SELESAI 2026-08-16 (sandbox clone research, PASS). Item
+    exit criteria ini tertutup.
 
 ## Local Operations
 

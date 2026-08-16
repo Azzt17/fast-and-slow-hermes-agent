@@ -1021,3 +1021,23 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - Severity: `S2` (perubahan kontrak plugin + runtime restart; tidak ada S0/S1; snapshot diambil sebelum deploy; data aman).
 - Action: CURRENT.md di-update (ADR-0024 + status deploy). Commit lokal menyusul; push menunggu approval Farid. Restart coding dijadwalkan saat idle.
 - Result: `done`
+
+### 2026-08-16T14:30+08:00 — Rollback Drill PASS (sandbox clone, profile research)
+
+- Session: sesi coding aktif (Ada)
+- Actor: `Ada`
+- Task: Penuhi exit criteria beta — rollback drill code+data minimal sekali. Karena memory/skills profile produksi (Asa/Nellie/Ada) dipakai sehari-hari dan tidak boleh hilang, drill dijalankan di **sandbox clone terisolasi** (`~/.hermes-rollback-drill/research-sandbox`), bukan di produksi.
+- Mode: `drill` (sandbox) — produksi tidak disentuh.
+- Prosedur:
+  1. Preflight: snapshot `herald-0024-20260816T101604+0800` berisi hot_sessions+history (tanpa chroma). Profile research 208M; bagian dual-memory+plugin 6.1M di-clone ke sandbox. Baseline hash produksi dicatat.
+  2. State A (latest) sandbox di-snapshot: hot_rows=236, pending=40, mem_index=56, trusted=38; hash tercatat.
+  3. **Phase 1 — rollback ke snapshot lama**: restore hot_sessions+history dari `herald-0024`, hapus chroma (simulasi arsip tidak lengkap). Hasil: integrity `ok`, hot_rows=228/pending=32/mem=56/trusted=38 (sesuai snapshot), retrieval fail-closed (`0` hasil, tidak crash).
+  4. **Phase 2 — restore balik ke state A**: integrity `ok`, hash identik state A, counts kembali (236/40/56/38), retrieval pulih (`query "research"` → 1512 char).
+  5. Bukti produksi: hash `hot_sessions.sqlite3` + `history.db` research **identik sebelum/sesudah**; gateway default/coding/nellie tetap `active`.
+  6. Cleanup: sandbox + state A dihapus.
+- Temuan penting:
+  - Rollback ke snapshot **tanpa chroma** → integrity OK tapi retrieval kosong (recall hilang). Ini membuktikan nilai `backup_paths()` (ADR-0024): `hermes backup` kini menyertakan chroma sehingga rollback paired code+data tidak kehilangan recall.
+  - Retrieval `0` untuk query generik bukan kegagalan restore — mem0 history (56) sinkron dengan memory_index (56); query domain-spesifik (`research`) mengembalikan 1512 char.
+- Severity: `S3` (drill sandbox; tidak ada perubahan produksi; exit criteria terpenuhi).
+- Action: CURRENT.md di-update (exit criteria rollback drill = PASS). Commit lokal menyusul.
+- Result: `done`
