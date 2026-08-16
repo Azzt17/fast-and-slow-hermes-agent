@@ -1112,3 +1112,17 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - **Severity**: T3 (dokumentasi + recovery rutin)
 - **Action**: update CURRENT.md + draft ringkasan penutupan + commit + push
 - **Result**: done
+
+### 2026-08-16T16:00+08:00 — Beta DITUTUP resmi (keputusan Farid)
+
+- **Actor**: Farid (keputusan) + Ada (eksekusi)
+- **Keputusan**: Beta v0.1.0-beta.1 ditutup **sekarang** (16 Agu, 3 hari lebih cepat dari target 19 Agu). Lanjut Fase 9 (hardening & rilis portofolio).
+- **Alasan**: semua exit criteria PASS — hari aktif 14/14, sesi 49/30, baseline PASS, rollback drill PASS, test 87/87, semua open item material tertutup, pending stranded 0.
+- **Konsekuensi**:
+  - Status CURRENT.md → `Selesai`.
+  - Fase 9 dimulai: perencanaan di `.hermes/plans/2026-08-16_153000-fase9-hardening-portofolio.md`.
+  - Branch kerja beralih ke `fase-9/portofolio` (Task 2 plan).
+  - ADR-0016 (beta dogfooding) selesai diterapkan; keputusan hardening Fase 9 berdasarkan data beta nyata.
+- **Severity**: T3 (dokumentasi + transisi)
+- **Action**: commit + push (approval Farid)
+- **Result**: done

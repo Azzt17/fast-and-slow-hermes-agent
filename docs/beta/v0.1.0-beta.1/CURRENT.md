@@ -3,7 +3,7 @@
 File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 
 **Versi**: `v0.1.0-beta.1`
-**Status**: Berjalan — ADR-0024 deployed
+**Status**: `Selesai` — beta ditutup 2026-08-16 (keputusan Farid: tutup sekarang, lanjut Fase 9; semua exit criteria PASS)
 **Checkpoint code**: `18c770b` (tag beta); plugin live = `602dcd07…` (ADR-0024)
 **Branch dokumentasi**: `beta/0.1-dogfooding-docs`
 **Tanggal mulai**: `2026-07-29T12:29+08:00`
