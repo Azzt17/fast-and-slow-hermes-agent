@@ -142,6 +142,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._mem0_config: dict[str, Any] | None = None
         self._llm_call: Any = None
         self._memory_user_id = "default"
+        self._agent_context = "primary"
         self._prefetch_cache: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_lock = threading.Lock()
@@ -160,6 +161,7 @@ class MemoryProvider(BaseMemoryProvider):
             raise ValueError("initialize() requires hermes_home")
 
         self._session_id = session_id
+        self._agent_context = str(kwargs.get("agent_context") or "primary").strip() or "primary"
         self._memory_user_id = str(
             kwargs.get("memory_user_id")
             or kwargs.get("user_id")
@@ -341,6 +343,16 @@ class MemoryProvider(BaseMemoryProvider):
         messages: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
         del messages
+
+        # ADR-0024: subagent/cron system prompts would corrupt the user's
+        # representation. Only primary contexts (plus flush of a primary
+        # session) write hot turns.
+        if self._agent_context not in ("primary", "flush"):
+            logger.debug(
+                "sync_turn() skipped for agent_context=%s (ADR-0024)",
+                self._agent_context,
+            )
+            return
 
         store = self._store
         target_session_id = session_id or self._session_id
@@ -607,6 +619,51 @@ class MemoryProvider(BaseMemoryProvider):
     def get_config_schema(self) -> list[dict[str, Any]]:
         return []
 
+    def backup_paths(self) -> list[str]:
+        """ADR-0024: declare dual-memory state so ``hermes backup`` captures it.
+
+        Must be callable without initialize() and without network. Resolve
+        from HERMES_HOME env only; fall back to the default profile home.
+        """
+
+        home = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes")
+        return [os.path.join(home, "hermes-dual-memory")]
+
+    def on_memory_write(
+        self,
+        action: str,
+        target: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """ADR-0024: append-only audit trail for built-in Core Memory writes.
+
+        Deliberately does NOT write to Mem0/shadow or mark anything trusted.
+        System-2 extraction (ADR-0005) and quarantine (ADR-0011) remain the
+        only admission path to retrieval. Raw content is never persisted —
+        only a SHA-256 hash plus lightweight metadata.
+        """
+
+        store = self._store
+        if store is None:
+            return
+        try:
+            import hashlib
+
+            content_hash = hashlib.sha256((content or "").encode("utf-8")).hexdigest()
+            meta_json = None
+            if metadata:
+                meta_json = json.dumps(metadata, ensure_ascii=False, sort_keys=True)
+            store.add_audit_entry(
+                action=str(action or ""),
+                target=str(target or ""),
+                content_hash=content_hash,
+                metadata_json=meta_json,
+                session_id=self._session_id or None,
+            )
+        except Exception:
+            logger.exception("Failed to record core-memory audit entry")
+
     def _consolidate(self, session_id: str, *, trigger: str = "unknown") -> Optional[dict[str, Any]]:
         store = self._store
         if store is None or not session_id:
@@ -754,8 +811,18 @@ class MemoryProvider(BaseMemoryProvider):
         **kwargs: Any,
     ) -> None:
         """Update provider scope when Hermes rotates the active session."""
-        del parent_session_id, reset, rewound, kwargs
+        del reset, rewound, kwargs
         self._wait_for_sync(self._session_id)
+        # ADR-0024: record lineage when a real parent exists (/branch,
+        # /resume, compression). reset=True means a genuinely new
+        # conversation with no lineage, so we skip provenance there.
+        if parent_session_id and self._store is not None:
+            try:
+                self._store.record_parent_session(
+                    self._session_id, parent_session_id
+                )
+            except Exception:
+                logger.exception("Failed to record parent_session lineage")
         self._session_id = new_session_id
 
     def on_session_end(self, messages: List[Dict[str, Any]]) -> None:

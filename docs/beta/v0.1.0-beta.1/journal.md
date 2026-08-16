@@ -1000,3 +1000,24 @@ lokal `Asia/Shanghai` dan format ISO-8601.
 - **Severity**: T3 (rutin, tidak ada S0/S1)
 - **Action**: update CURRENT.md + commit lokal
 - **Result**: sukses (script deterministik, tanpa LLM agent), tidak di-push
+
+### 2026-08-16T10:30+08:00 — Kompatibilitas Hermes Herald (ADR-0024): agent_context filter, backup_paths, on_memory_write audit, parent lineage
+
+- Session: `20260816_091939_f555d9d6` (default) + sesi coding aktif
+- Actor: `Ada`
+- Task: Eksekusi semua update kompatibilitas herald (Bagian A) + integrasi baru (Bagian C) per analisis kesenjangan v0.20.1. Hermes di-update ke `2026-08-13` (Herald); gateway default & coding restart 10:09; research (nellie) masih kode lama hingga deploy ini.
+- Mode: `implementation` + `deploy` + `runtime-fix`
+- Changes:
+  - ADR-0024 ditulis (`docs/decisions/0024-herald-compatibility.md`): filter `agent_context` (subagent/cron skip hot write), `backup_paths()`, `on_memory_write()` sebagai **audit trail append-only** (bukan bypass ke trusted — menjaga ADR-0005 + quarantine), lineage `parent_session_id` di `on_session_switch`.
+  - `storage.py`: kolom `hot_sessions.parent_session_id` (migration idempotent via `PRAGMA table_info`), tabel `core_memory_audit` (hash-only, isi mentah tidak disalin), method `add_audit_entry`/`audit_entries`/`record_parent_session`.
+  - `__init__.py`: `_agent_context` diset di `initialize`; `sync_turn` skip untuk non-primary (kecuali flush); `backup_paths()` resolve dari `HERMES_HOME` tanpa network; `on_memory_write()` catat hash + metadata; `on_session_switch` simpan lineage saat `parent_session_id` ada dan `reset=False`.
+- Tests: `tests/test_herald_compatibility.py` baru (7 kasus: subagent/cron skip, primary write, backup_paths tanpa initialize, audit trail tanpa shadow write, parent lineage, migration idempotent). Suite penuh: **86/86 OK** (HERMES_SOURCE_ROOT diset; 3 error pre-existing di test_profile_assets hilang setelah env benar).
+- Deploy: snapshot runtime `herald-0024-20260816T101616+0800` (3 profile). Plugin baru di-copy ke default/research/coding via staging+rename; hash ter-deploy == hash repo (`602dcd07…/7df81366…`).
+- Runtime fixes:
+  - **Duplikat gateway research dimatikan**: `hermes-gateway-research.service` (crash-loop, `Restart=` 41.247×) di-`stop`+`disable` via `systemd-run` transient (blokade gateway anti-SIGTERM); `hermes-gateway-nellie.service` (HERMES_HOME research) di-restart → MainPID 3877485, start 10:17:40 WITA.
+  - **Default gateway restart** → MainPID 3878282, start 10:19:42 WITA (plugin ADR-0024 aktif).
+  - Coding gateway **belum restart** (sesi aktif; ditunda saat idle sesuai RUNBOOK/skill).
+  - Migration schema DB live default/research belum muncul karena menunggu sesi baru memanggil `initialize()`; dibuktikan idempotent pada salinan DB research (10→11 tabel, kolom baru ada, panggilan ulang aman).
+- Severity: `S2` (perubahan kontrak plugin + runtime restart; tidak ada S0/S1; snapshot diambil sebelum deploy; data aman).
+- Action: CURRENT.md di-update (ADR-0024 + status deploy). Commit lokal menyusul; push menunggu approval Farid. Restart coding dijadwalkan saat idle.
+- Result: `done`

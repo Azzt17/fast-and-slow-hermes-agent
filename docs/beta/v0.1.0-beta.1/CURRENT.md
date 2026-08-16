@@ -3,15 +3,15 @@
 File ini adalah handoff pertama yang wajib dibaca setiap session baru.
 
 **Versi**: `v0.1.0-beta.1`
-**Status**: Berjalan — baseline beku
-**Checkpoint code**: `18c770b`
+**Status**: Berjalan — ADR-0024 deployed
+**Checkpoint code**: `18c770b` (tag beta); plugin live = `602dcd07…` (ADR-0024)
 **Branch dokumentasi**: `beta/0.1-dogfooding-docs`
 **Tanggal mulai**: `2026-07-29T12:29+08:00`
 **Target selesai**: `2026-08-19` (tetap tunduk pada minimum hari/sesi)
-**Countdown**: 13 hari tersisa ke target 08-19 (per 2026-08-06)
-**Hari aktif / target**: `8 / 14` (aktif 2026-07-29, 2026-07-30, 2026-07-31, 2026-08-01, 2026-08-03, 2026-08-04, 2026-08-05, 2026-08-06)
-**Sesi nyata / target**: `33 / 30` (default, research, coding — dihitung dari session_id unik di hot_sessions per hari ini)
-**Severity tertinggi unresolved**: S2 — malformed System-2 report chunk
+**Countdown**: 3 hari tersisa ke target 08-19 (per 2026-08-16)
+**Hari aktif / target**: `14 / 14` ✅ (per 2026-08-16; dihitung dari session_id unik lintas 3 profile)
+**Sesi nyata / target**: `>33 / 30` ✅ (target sudah terlampaui per 08-06; data terbaru menyusul)
+**Severity tertinggi unresolved**: S2 — malformed System-2 report chunk (open item #11)
 
 ## Temuan Preflight Saat Ini
 
@@ -53,6 +53,13 @@ File ini adalah handoff pertama yang wajib dibaca setiap session baru.
   openai`). Fix: env `HERMES_DUAL_MEMORY_LLM_MODEL=ada-low` di `.env` coding.
   Recovery 56 pending via pipeline produksi sukses: memory_index 0 -> 21
   (trusted 7, quarantined 14); live LLM smoke ke 9router pakai ada-low OK.
+- **ADR-0024 deployed (2026-08-16)**: Hermes herald v0.20.1 — kompatibilitas
+  penuh; plugin di-deploy ke 3 profile (hash `602dcd07…/7df81366…`). Fitur
+  baru: `agent_context` filter (subagent/cron skip hot write), `backup_paths()`,
+  `on_memory_write` audit trail (append-only, hash saja), `parent_session_id`
+  lineage. 86/86 test PASS. Gateway default (3878282) dan nellie/research (3877485)
+  di-restart; duplikat `hermes-gateway-research.service` (crash-loop 41.247×)
+  dimatikan + disabled. Gateway coding belum restart (sesi aktif).
 
 ## Active Configuration
 

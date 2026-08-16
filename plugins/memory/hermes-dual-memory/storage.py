@@ -16,8 +16,14 @@ CREATE TABLE IF NOT EXISTS hot_sessions (
     role          TEXT,
     content       TEXT NOT NULL,
     token_count   INTEGER,
-    consolidated  BOOLEAN DEFAULT 0
+    consolidated  BOOLEAN DEFAULT 0,
+    parent_session_id TEXT
 )
+"""
+
+# ADR-0024: lineage /branch /resume /compression tercatat di hot_sessions.
+HOT_SESSIONS_PARENT_COLUMN = """
+ALTER TABLE hot_sessions ADD COLUMN parent_session_id TEXT
 """
 
 HOT_SESSIONS_INDEX = """
@@ -142,6 +148,25 @@ CREATE TABLE IF NOT EXISTS memory_import_provenance (
 )
 """
 
+# ADR-0024: audit trail append-only untuk tulis Core Memory bawaan Hermes.
+# Hanya hash konten + metadata — isi mentah TIDAK disalin (prinsip sanitasi).
+CORE_MEMORY_AUDIT_SCHEMA = """
+CREATE TABLE IF NOT EXISTS core_memory_audit (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    action        TEXT NOT NULL,
+    target        TEXT NOT NULL,
+    content_hash  TEXT NOT NULL,
+    metadata_json TEXT,
+    session_id    TEXT
+)
+"""
+
+CORE_MEMORY_AUDIT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_core_memory_audit_ts
+ON core_memory_audit(occurred_at)
+"""
+
 
 def resolve_hot_sessions_db_path(base_path: str | Path) -> Path:
     """Resolve the shared SQLite file used by this provider."""
@@ -260,6 +285,15 @@ class HotSessionStore:
             conn.execute(MEMORY_COMPACTION_SOURCES_SCHEMA)
             conn.execute(IMPORT_BATCHES_SCHEMA)
             conn.execute(IMPORT_PROVENANCE_SCHEMA)
+            # ADR-0024: idempotent migration untuk hot_sessions.parent_session_id
+            hot_cols = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(hot_sessions)").fetchall()
+            }
+            if "parent_session_id" not in hot_cols:
+                conn.execute(HOT_SESSIONS_PARENT_COLUMN)
+            conn.execute(CORE_MEMORY_AUDIT_SCHEMA)
+            conn.execute(CORE_MEMORY_AUDIT_INDEX)
             conn.execute(
                 """
                 UPDATE memory_index
@@ -278,6 +312,7 @@ class HotSessionStore:
         role: str | None = None,
         token_count: int | None = None,
         consolidated: bool = False,
+        parent_session_id: str | None = None,
     ) -> int:
         """Insert a raw turn into hot_sessions and return the new row id."""
 
@@ -289,13 +324,85 @@ class HotSessionStore:
                     role,
                     content,
                     token_count,
-                    consolidated
+                    consolidated,
+                    parent_session_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    role,
+                    content,
+                    token_count,
+                    1 if consolidated else 0,
+                    parent_session_id,
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def record_parent_session(self, session_id: str, parent_session_id: str) -> int:
+        """ADR-0024: record lineage on the most recent unconsolidated rows.
+
+        Called from on_session_switch when a real lineage exists. Only rows
+        that still have NULL parent are updated so the first lineage wins.
+        """
+
+        with self.connect() as conn:
+            result = conn.execute(
+                """
+                UPDATE hot_sessions
+                SET parent_session_id = ?
+                WHERE session_id = ?
+                  AND parent_session_id IS NULL
+                """,
+                (parent_session_id, session_id),
+            )
+            return int(result.rowcount)
+
+    def add_audit_entry(
+        self,
+        *,
+        action: str,
+        target: str,
+        content_hash: str,
+        metadata_json: str | None = None,
+        session_id: str | None = None,
+    ) -> int:
+        """ADR-0024: append-only audit trail for built-in Core Memory writes.
+
+        Only hashes + metadata are stored; raw content is never copied.
+        """
+
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO core_memory_audit (
+                    action, target, content_hash, metadata_json, session_id
                 )
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (session_id, role, content, token_count, 1 if consolidated else 0),
+                (action, target, content_hash, metadata_json, session_id),
             )
-            return int(cursor.lastrowid)
+            last_id = cursor.lastrowid
+            if last_id is None:
+                raise RuntimeError("Failed to read audit entry id")
+            return int(last_id)
+
+    def audit_entries(self, limit: int = 100) -> list[dict[str, object]]:
+        """Return recent audit entries for monitoring/review."""
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, occurred_at, action, target, content_hash,
+                       metadata_json, session_id
+                FROM core_memory_audit
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def fetch_turns(
         self,
@@ -314,7 +421,8 @@ class HotSessionStore:
                     role,
                     content,
                     token_count,
-                    consolidated
+                    consolidated,
+                    parent_session_id
                 FROM hot_sessions
                 WHERE session_id = ? AND consolidated = ?
                 ORDER BY id ASC
