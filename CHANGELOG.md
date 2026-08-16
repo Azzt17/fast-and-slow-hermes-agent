@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-16 — Fase 9: Hardening & Rilis Portofolio
+
+- [fase-9 rilis] Beta v0.1.0-beta.1 **ditutup resmi** (14/14 hari aktif, 49/30 sesi, baseline PASS, rollback drill PASS, test 87/87). Rencana Fase 9 di `.hermes/plans/2026-08-16_153000-fase9-hardening-portofolio.md`.
+- [fase-9 hardening] Verifikasi `backup_paths()` ADR-0024 di produksi: `hermes backup` kini menyertakan `hot_sessions.sqlite3` + `history.db` + `chroma/` untuk 3 profile (default, research, coding) — rollback paired code+data tidak kehilangan recall.
+- [fase-9 hardening] Review quarantine threshold: 19:19 coding = 16 `semantic_unsafe` (guard keamanan bekerja) + 3 timeout — **tidak ada perubahan threshold** (ADR-0025).
+- [fase-9 keputusan] ADR-0025: micro-compaction **tidak diaktifkan** (break prompt cache per turn, fidelity turun), context engine **tetap default compressor** — tidak ada perubahan konfigurasi.
+- [fase-9 dokumen] README root portofolio-grade (Bahasa Indonesia) + LICENSE MIT + demo alur kerja (`docs/demo/alur-kerja.md`).
+- [fase-9 validasi] Uji instalasi ulang bersih di sandbox terisolasi: 87/87 test PASS + smoke test plugin (initialize/sync_turn/shutdown) — kriteria keluar Fase 9 terpenuhi.
+- [fase-9 keamanan] `profiles/` dihapus dari git tracking (data pribadi Asa/Nellie — MEMORY.md/USER.md/SOUL.md) + `.gitignore` di-update (ref ADR-0016 konsekuensi: data sensitif tidak di git). Backup salinan di `~/hermes-portofolio-backup/profiles-repo-copy/`.
+
 ## 2026-08-05
 
 - [beta-0.1 hardening] menaikkan timeout konsolidasi System-2 dari 30s ke 90s dengan guard minimum 60s (ref ADR-0023). Diagnosis: profil research (Nellie) berhenti berkonsolidasi sejak 2026-07-31 karena `httpx.ReadTimeout` — timeout 30s berada tepat di p95 latensi (29.1s). Reproduksi pada 20 chunk mengonfirmasi 1 timeout pada payload kecil; rerun 21/21 chunk sukses setelah perbaikan, termasuk chunk yang makan 38.8s (bukti 30s terlalu ketat). Tambahan observability: kegagalan konsolidasi dicatat ke `maintenance_state.last_consolidation_error`. Regression suite 16 passed.
