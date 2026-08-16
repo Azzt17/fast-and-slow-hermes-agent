@@ -5,6 +5,7 @@ import json
 import tempfile
 import time
 import unittest
+import threading
 from pathlib import Path
 
 
@@ -25,7 +26,7 @@ class FakeMem0:
 
     def add(self, content, **kwargs):
         self.calls.append((content, kwargs))
-        return {"results": [{"id": "fake-memory-1"}]}
+        return {"results": [{"id": f"fake-memory-{len(self.calls)}"}]}
 
 
 class ConsolidationTest(unittest.TestCase):
@@ -94,6 +95,63 @@ class ConsolidationTest(unittest.TestCase):
             self.assertEqual(provider._store.pending_count("session-2"), 0)
             self.assertTrue(any(thread.daemon for thread in provider._consolidation_threads))
 
+    def test_session_end_waits_for_async_sync_before_fetching_pending_rows(self):
+        mem0 = FakeMem0()
+        sync_started = threading.Event()
+        release_sync = threading.Event()
+
+        def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            return self.payload
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("race-session", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            original_add = provider._store.add_turn
+
+            def delayed_add(*args, **kwargs):
+                sync_started.set()
+                release_sync.wait(timeout=2)
+                return original_add(*args, **kwargs)
+
+            provider._store.add_turn = delayed_add
+            provider.sync_turn("user fact", "assistant acknowledgement")
+            self.assertTrue(sync_started.wait(timeout=1))
+            provider.on_session_end([])
+            time.sleep(0.05)
+            self.assertEqual(mem0.calls, [])
+            release_sync.set()
+            deadline = time.monotonic() + 2
+            while provider._store.pending_count("race-session") and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertEqual(provider._store.pending_count("race-session"), 0)
+            provider.shutdown()
+
+    def test_session_switch_updates_scope_after_prior_sync_finishes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("old-session", hermes_home=tmp, mem0_client=FakeMem0(), llm_callable=lambda **_: self.payload)
+            provider.on_session_switch("new-session", parent_session_id="old-session", reset=True)
+            self.assertEqual(provider._session_id, "new-session")
+
+    def test_session_end_does_not_wait_for_another_session_sync(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-a", hermes_home=tmp, mem0_client=FakeMem0(), llm_callable=lambda **_: self.payload)
+            provider.shutdown()
+            release = threading.Event()
+            unrelated = threading.Thread(target=lambda: release.wait(timeout=2))
+            provider._sync_threads = [unrelated]
+            provider._sync_thread_sessions[unrelated] = "session-b"
+            unrelated.start()
+            try:
+                provider._wait_for_sync("session-a", timeout=0.01)
+                self.assertTrue(unrelated.is_alive())
+            finally:
+                release.set()
+                unrelated.join(timeout=1)
+
     def test_invalid_report_does_not_mark_hot_rows(self):
         mem0 = FakeMem0()
         calls = 0
@@ -115,6 +173,57 @@ class ConsolidationTest(unittest.TestCase):
             self.assertEqual(provider._store.pending_count("session-3"), 2)
             self.assertEqual(mem0.calls, [])
 
+    def test_long_session_is_consolidated_in_bounded_whole_turn_chunks(self):
+        mem0 = FakeMem0()
+        calls = []
+
+        def llm_call(**kwargs):
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            calls.append(kwargs["messages"])
+            return self.payload
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-long", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            for _ in range(4):
+                provider._store.add_turn("session-long", "x" * 3_000, role="user")
+            summary = provider.on_pre_compress([])
+            self.assertEqual(summary, "Hermes uses a dual memory provider")
+            self.assertEqual(provider._store.pending_count("session-long"), 0)
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(all(len(messages[1]["content"]) <= 6_800 for messages in calls))
+
+    def test_oversized_turn_remains_whole_in_its_own_chunk(self):
+        consolidation = self.module._consolidation
+        rows = [
+            {"content": "x" * 5_000},
+            {"content": "y" * 2_000},
+            {"content": "z" * 2_000},
+        ]
+        self.assertEqual([len(chunk) for chunk in consolidation.chunk_rows(rows)], [1, 2])
+
+    def test_failed_chunk_leaves_it_and_later_chunks_pending(self):
+        mem0 = FakeMem0()
+        calls = 0
+
+        def llm_call(**kwargs):
+            nonlocal calls
+            if kwargs["task"] == "memory_admission":
+                return '{"safe":true,"reason":"ordinary durable fact"}'
+            calls += 1
+            if calls <= 2:
+                return self.payload
+            raise TimeoutError("combo timeout")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = self.module.MemoryProvider()
+            provider.initialize("session-partial", hermes_home=tmp, mem0_client=mem0, llm_callable=llm_call)
+            for _ in range(7):
+                provider._store.add_turn("session-partial", "x" * 8_000, role="user")
+            self.assertEqual(provider.on_pre_compress([]), "")
+            self.assertEqual(provider._store.pending_count("session-partial"), 5)
+
     def test_new_skill_output_limits_are_enforced(self):
         consolidation = self.module._consolidation
         base = {
@@ -133,6 +242,40 @@ class ConsolidationTest(unittest.TestCase):
         oversized = dict(base, new_skills=[{"title": "Valid title", "detail": "x" * 1201}])
         with self.assertRaisesRegex(ValueError, "detail cannot exceed 1200"):
             consolidation.parse_report(json.dumps(oversized))
+
+    def test_new_skill_output_limits_sanitize_drops_bad_items(self):
+        consolidation = self.module._consolidation
+        base = {
+            "summary": "Reusable procedure",
+            "new_skills": [],
+            "anomalies": [],
+            "entities": [],
+            "relations": [],
+            "memory_type": "episodic",
+            "importance_score": 5,
+        }
+        # Satu item valid + satu detail terlalu panjang → sanitize harus mempertahankan
+        # item valid dan drop yang buruk, bukan menggagalkan seluruh report.
+        mixed = dict(
+            base,
+            new_skills=[
+                {"title": "Good skill", "detail": "Short enough detail."},
+                {"title": "Bad skill", "detail": "x" * 1201},
+            ],
+        )
+        report = consolidation.parse_report(json.dumps(mixed), sanitize_new_skills=True)
+        self.assertEqual(len(report["new_skills"]), 1)
+        self.assertEqual(report["new_skills"][0]["title"], "Good skill")
+        # Tanpa flag, kontrak fail-closed tetap dipertahankan.
+        with self.assertRaisesRegex(ValueError, "detail cannot exceed 1200"):
+            consolidation.parse_report(json.dumps(mixed))
+        # Kuantitas berlebih juga disanitasi (drop ke MAX_NEW_SKILLS pertama).
+        too_many = dict(
+            base,
+            new_skills=[{"title": f"Skill {index}", "detail": "Do it."} for index in range(4)],
+        )
+        report = consolidation.parse_report(json.dumps(too_many), sanitize_new_skills=True)
+        self.assertEqual(len(report["new_skills"]), consolidation.MAX_NEW_SKILLS)
 
 
 if __name__ == "__main__":

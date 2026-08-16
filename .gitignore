@@ -8,3 +8,6 @@ __pycache__/
 .codex/
 chroma_db_test/
 docs/t
+
+# Data pribadi profile — jangan di-track (ADR-0016: data sensitif tidak di git)
+profiles/

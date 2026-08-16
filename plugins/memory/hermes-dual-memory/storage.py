@@ -16,8 +16,14 @@ CREATE TABLE IF NOT EXISTS hot_sessions (
     role          TEXT,
     content       TEXT NOT NULL,
     token_count   INTEGER,
-    consolidated  BOOLEAN DEFAULT 0
+    consolidated  BOOLEAN DEFAULT 0,
+    parent_session_id TEXT
 )
+"""
+
+# ADR-0024: lineage /branch /resume /compression tercatat di hot_sessions.
+HOT_SESSIONS_PARENT_COLUMN = """
+ALTER TABLE hot_sessions ADD COLUMN parent_session_id TEXT
 """
 
 HOT_SESSIONS_INDEX = """
@@ -115,6 +121,50 @@ CREATE TABLE IF NOT EXISTS memory_compaction_sources (
     FOREIGN KEY (compacted_memory_index_id) REFERENCES memory_index(id),
     FOREIGN KEY (source_memory_index_id) REFERENCES memory_index(id)
 )
+"""
+
+IMPORT_BATCHES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS import_batches (
+    batch_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    rolled_back_at DATETIME
+)
+"""
+
+IMPORT_PROVENANCE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS memory_import_provenance (
+    idempotency_key TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL,
+    memory_index_id INTEGER NOT NULL UNIQUE,
+    candidate_id TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL,
+    temporal_visibility TEXT NOT NULL,
+    approved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES import_batches(batch_id),
+    FOREIGN KEY (memory_index_id) REFERENCES memory_index(id)
+)
+"""
+
+# ADR-0024: audit trail append-only untuk tulis Core Memory bawaan Hermes.
+# Hanya hash konten + metadata — isi mentah TIDAK disalin (prinsip sanitasi).
+CORE_MEMORY_AUDIT_SCHEMA = """
+CREATE TABLE IF NOT EXISTS core_memory_audit (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    action        TEXT NOT NULL,
+    target        TEXT NOT NULL,
+    content_hash  TEXT NOT NULL,
+    metadata_json TEXT,
+    session_id    TEXT
+)
+"""
+
+CORE_MEMORY_AUDIT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_core_memory_audit_ts
+ON core_memory_audit(occurred_at)
 """
 
 
@@ -233,6 +283,17 @@ class HotSessionStore:
             conn.execute(MEMORY_LIFECYCLE_EVENTS_SCHEMA)
             conn.execute(MEMORY_LIFECYCLE_EVENTS_INDEX)
             conn.execute(MEMORY_COMPACTION_SOURCES_SCHEMA)
+            conn.execute(IMPORT_BATCHES_SCHEMA)
+            conn.execute(IMPORT_PROVENANCE_SCHEMA)
+            # ADR-0024: idempotent migration untuk hot_sessions.parent_session_id
+            hot_cols = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(hot_sessions)").fetchall()
+            }
+            if "parent_session_id" not in hot_cols:
+                conn.execute(HOT_SESSIONS_PARENT_COLUMN)
+            conn.execute(CORE_MEMORY_AUDIT_SCHEMA)
+            conn.execute(CORE_MEMORY_AUDIT_INDEX)
             conn.execute(
                 """
                 UPDATE memory_index
@@ -251,6 +312,7 @@ class HotSessionStore:
         role: str | None = None,
         token_count: int | None = None,
         consolidated: bool = False,
+        parent_session_id: str | None = None,
     ) -> int:
         """Insert a raw turn into hot_sessions and return the new row id."""
 
@@ -262,13 +324,85 @@ class HotSessionStore:
                     role,
                     content,
                     token_count,
-                    consolidated
+                    consolidated,
+                    parent_session_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    role,
+                    content,
+                    token_count,
+                    1 if consolidated else 0,
+                    parent_session_id,
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def record_parent_session(self, session_id: str, parent_session_id: str) -> int:
+        """ADR-0024: record lineage on the most recent unconsolidated rows.
+
+        Called from on_session_switch when a real lineage exists. Only rows
+        that still have NULL parent are updated so the first lineage wins.
+        """
+
+        with self.connect() as conn:
+            result = conn.execute(
+                """
+                UPDATE hot_sessions
+                SET parent_session_id = ?
+                WHERE session_id = ?
+                  AND parent_session_id IS NULL
+                """,
+                (parent_session_id, session_id),
+            )
+            return int(result.rowcount)
+
+    def add_audit_entry(
+        self,
+        *,
+        action: str,
+        target: str,
+        content_hash: str,
+        metadata_json: str | None = None,
+        session_id: str | None = None,
+    ) -> int:
+        """ADR-0024: append-only audit trail for built-in Core Memory writes.
+
+        Only hashes + metadata are stored; raw content is never copied.
+        """
+
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO core_memory_audit (
+                    action, target, content_hash, metadata_json, session_id
                 )
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (session_id, role, content, token_count, 1 if consolidated else 0),
+                (action, target, content_hash, metadata_json, session_id),
             )
-            return int(cursor.lastrowid)
+            last_id = cursor.lastrowid
+            if last_id is None:
+                raise RuntimeError("Failed to read audit entry id")
+            return int(last_id)
+
+    def audit_entries(self, limit: int = 100) -> list[dict[str, object]]:
+        """Return recent audit entries for monitoring/review."""
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, occurred_at, action, target, content_hash,
+                       metadata_json, session_id
+                FROM core_memory_audit
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def fetch_turns(
         self,
@@ -287,7 +421,8 @@ class HotSessionStore:
                     role,
                     content,
                     token_count,
-                    consolidated
+                    consolidated,
+                    parent_session_id
                 FROM hot_sessions
                 WHERE session_id = ? AND consolidated = ?
                 ORDER BY id ASC
@@ -535,6 +670,75 @@ class HotSessionStore:
                 )
             return memory_index_id
 
+    def record_import_provenance(
+        self,
+        *,
+        batch_id: str,
+        idempotency_key: str,
+        memory_index_id: int,
+        candidate_id: str,
+        source_path: str,
+        source_sha256: str,
+        temporal_visibility: str,
+    ) -> None:
+        if temporal_visibility not in ("current", "historical"):
+            raise ValueError("unsupported temporal visibility")
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO import_batches (batch_id, source, status) VALUES (?, ?, 'active')",
+                (batch_id, "obsidian-reviewed-import"),
+            )
+            conn.execute(
+                """
+                INSERT INTO memory_import_provenance (
+                    idempotency_key, batch_id, memory_index_id, candidate_id,
+                    source_path, source_sha256, temporal_visibility
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    idempotency_key, batch_id, memory_index_id, candidate_id,
+                    source_path, source_sha256, temporal_visibility,
+                ),
+            )
+
+    def import_provenance(self, idempotency_key: str) -> dict[str, object] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM memory_import_provenance WHERE idempotency_key = ?",
+                (idempotency_key,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def mark_import_historical(self, memory_index_id: int) -> None:
+        """Exclude a trusted import from current-state retrieval, preserving history."""
+        with self.connect() as conn:
+            conn.execute(
+                "UPDATE memory_index SET t_invalid = CURRENT_TIMESTAMP WHERE id = ?",
+                (memory_index_id,),
+            )
+
+    def rollback_import_batch(self, batch_id: str) -> int:
+        """Block one batch from retrieval while retaining immutable audit lineage."""
+        with self.connect() as conn:
+            result = conn.execute(
+                """
+                UPDATE memory_index
+                SET status = 'quarantined',
+                    flagged_reason = 'import_batch_rolled_back',
+                    t_invalid = CURRENT_TIMESTAMP
+                WHERE id IN (
+                    SELECT memory_index_id FROM memory_import_provenance
+                    WHERE batch_id = ?
+                ) AND status != 'quarantined'
+                """,
+                (batch_id,),
+            )
+            conn.execute(
+                "UPDATE import_batches SET status = 'rolled_back', rolled_back_at = CURRENT_TIMESTAMP WHERE batch_id = ?",
+                (batch_id,),
+            )
+            return int(result.rowcount)
+
     @staticmethod
     def _finalize_memory_in_connection(
         conn: sqlite3.Connection,
@@ -750,6 +954,18 @@ class HotSessionStore:
                 (key,),
             ).fetchone()
         return str(row["value"]) if row is not None else None
+
+    def set_maintenance_state(self, key: str, value: str) -> None:
+        """Upsert a maintenance_state key (used for failure observability)."""
+        with self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO maintenance_state (key, value)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
 
     def episodic_decay_candidates(self) -> list[dict[str, Any]]:
         """Return active trusted episodic shadows eligible for decay."""

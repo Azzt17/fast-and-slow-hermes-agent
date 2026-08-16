@@ -54,3 +54,27 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Beta Dogfooding v0.1.0-beta.1 — WAJIB Lintas Session
+
+Sebelum pekerjaan beta, hardening, atau rilis apa pun, baca berurutan:
+
+1. `docs/beta/v0.1.0-beta.1/CURRENT.md`
+2. `docs/beta/v0.1.0-beta.1/README.md`
+3. 20 entri terakhir `docs/beta/v0.1.0-beta.1/journal.md`
+
+Checkpoint rollback code adalah tag `v0.1.0-beta.1` pada commit `18c770b`.
+Rollback data harus memakai snapshot runtime yang berpasangan; jangan rollback
+code saja jika schema/vector/shadow state mungkin berubah.
+
+Selama status beta belum `Selesai`:
+
+- jangan mulai Fase 9;
+- semua observasi/perubahan config/code/data ditulis append-only ke jurnal;
+- update `CURRENT.md` setelah status, config, open item, rollback point, atau
+  severity berubah;
+- branch perubahan memakai prefix `beta/0.1-`;
+- policy/schema/migration baru wajib ADR + test reproduksi + baseline comparison;
+- S0/S1 menghentikan beta dan memicu rollback code+data;
+- jangan commit conversation mentah, credential, system prompt, atau isi memory
+  sensitif ke repo—hanya ringkasan tersanitasi.

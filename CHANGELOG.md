@@ -1,7 +1,24 @@
 # Changelog
 
+## 2026-08-16 — Fase 9: Hardening & Rilis Portofolio
+
+- [fase-9 rilis] Beta v0.1.0-beta.1 **ditutup resmi** (14/14 hari aktif, 49/30 sesi, baseline PASS, rollback drill PASS, test 87/87). Rencana Fase 9 di `.hermes/plans/2026-08-16_153000-fase9-hardening-portofolio.md`.
+- [fase-9 hardening] Verifikasi `backup_paths()` ADR-0024 di produksi: `hermes backup` kini menyertakan `hot_sessions.sqlite3` + `history.db` + `chroma/` untuk 3 profile (default, research, coding) — rollback paired code+data tidak kehilangan recall.
+- [fase-9 hardening] Review quarantine threshold: 19:19 coding = 16 `semantic_unsafe` (guard keamanan bekerja) + 3 timeout — **tidak ada perubahan threshold** (ADR-0025).
+- [fase-9 keputusan] ADR-0025: micro-compaction **tidak diaktifkan** (break prompt cache per turn, fidelity turun), context engine **tetap default compressor** — tidak ada perubahan konfigurasi.
+- [fase-9 dokumen] README root portofolio-grade (Bahasa Indonesia) + LICENSE MIT + demo alur kerja (`docs/demo/alur-kerja.md`).
+- [fase-9 validasi] Uji instalasi ulang bersih di sandbox terisolasi: 87/87 test PASS + smoke test plugin (initialize/sync_turn/shutdown) — kriteria keluar Fase 9 terpenuhi.
+- [fase-9 keamanan] `profiles/` dihapus dari git tracking (data pribadi Asa/Nellie — MEMORY.md/USER.md/SOUL.md) + `.gitignore` di-update (ref ADR-0016 konsekuensi: data sensitif tidak di git). Backup salinan di `~/hermes-portofolio-backup/profiles-repo-copy/`.
+
+## 2026-08-05
+
+- [beta-0.1 hardening] menaikkan timeout konsolidasi System-2 dari 30s ke 90s dengan guard minimum 60s (ref ADR-0023). Diagnosis: profil research (Nellie) berhenti berkonsolidasi sejak 2026-07-31 karena `httpx.ReadTimeout` — timeout 30s berada tepat di p95 latensi (29.1s). Reproduksi pada 20 chunk mengonfirmasi 1 timeout pada payload kecil; rerun 21/21 chunk sukses setelah perbaikan, termasuk chunk yang makan 38.8s (bukti 30s terlalu ketat). Tambahan observability: kegagalan konsolidasi dicatat ke `maintenance_state.last_consolidation_error`. Regression suite 16 passed.
+- [beta-0.1 recovery] mengonsolidasikan 72/74 hot rows pending di profil research (sesi 07-30 s.d. 08-04) lewat script recovery yang meniru pipeline produksi dengan timeout 90s; `memory_index` naik 15 → 39 (trusted 25, quarantined 14). 2 baris gagal karena new_skills detail >1200 char (S2), dibiarkan pending fail-closed. Retrieval terverifikasi: trusted visible, quarantined ter-block.
+- [beta-0.1 setup] membuat profile Hermes `coding` (persona **Ada**, terinspirasi Ada Lovelace — programmer pertama dunia) sebagai partner teknik Farid, sejajar dengan Asa (harian) dan Nellie (riset). Model `codex-subagent` via 9router, memory provider `hermes-dual-memory`, approvals smart, 14 skill coding diinstal (Tier 1-3), dokumentasi di `docs/profile/coding-ada.md`.
+
 ## 2026-07-29
 
+- [beta-0.1] menetapkan checkpoint dogfooding `v0.1.0-beta.1` setelah Fase 8, protokol uji 21 hari/minimal 14 hari aktif dan 30 sesi nyata, rollback code+data, jurnal append-only, serta handoff wajib lintas-session sebelum Fase 9 (ref ADR-0016).
 - [fase-8 follow-up] menambahkan bounded batch answerability gate untuk seluruh kandidat scored yang lolos threshold/shadow policy dan memperbesar abstention corpus menjadi 30 hard-negative. Full 48-query real-stack menjadi overall `PASS`: abstention `100%`, recall `100%`, precision@5 `26.67%`, security exclusion `100%`; trade-off latency p50/p95 `1350.603/1675.018 ms` dan verifier `111,905` prompt token dicatat eksplisit (ref ADR-0015).
 - [fase-8 follow-up] menutup gap temporal reasoning melalui mode historis deterministik yang hanya membuka superseded semantic trusted; current-state, quarantine, dan invalid episodic tetap tersembunyi. Real-stack temporal recall naik `50%` → `100%`; baseline aggregate recall menjadi `100%`, precision@5 `26.67%`, security exclusion tetap `100%`, overall tetap `PARTIAL` hanya karena abstention `50%` (ref ADR-0014).
 - [fase-8] menutup regression suite real-stack terisolasi untuk 20 query dalam tujuh kategori, memperbaiki retrieval Mem0 menjadi `top_k=5` plus cap lokal, dan menambahkan relevance threshold `0.55`. Baseline mencatat recall `90%`, precision@5 `24%`, latency p50/p95 `160.953/223.123 ms`, mean context `119.1` token/query, security exclusion `100%`, serta gap temporal reasoning dan abstention tetap `PARTIAL` apa adanya (ref ADR-0013).

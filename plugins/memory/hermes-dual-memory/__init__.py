@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
 import re
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, List, Dict
 
@@ -129,6 +131,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._hermes_home: Path | None = None
         self._store: HotSessionStore | None = None
         self._sync_threads: list[threading.Thread] = []
+        self._sync_thread_sessions: dict[threading.Thread, str] = {}
         self._consolidation_threads: list[threading.Thread] = []
         self._sync_lock = threading.Lock()
         self._consolidation_lock = threading.Lock()
@@ -139,6 +142,7 @@ class MemoryProvider(BaseMemoryProvider):
         self._mem0_config: dict[str, Any] | None = None
         self._llm_call: Any = None
         self._memory_user_id = "default"
+        self._agent_context = "primary"
         self._prefetch_cache: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_lock = threading.Lock()
@@ -157,6 +161,7 @@ class MemoryProvider(BaseMemoryProvider):
             raise ValueError("initialize() requires hermes_home")
 
         self._session_id = session_id
+        self._agent_context = str(kwargs.get("agent_context") or "primary").strip() or "primary"
         self._memory_user_id = str(
             kwargs.get("memory_user_id")
             or kwargs.get("user_id")
@@ -201,7 +206,16 @@ class MemoryProvider(BaseMemoryProvider):
             try:
                 from openai import OpenAI
 
-                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "30"))
+                timeout_seconds = float(os.environ.get("HERMES_DUAL_MEMORY_LLM_TIMEOUT", "90"))
+                # Guard: reject a misconfigured value that would reintroduce
+                # the flakiness this ADR resolves (see ADR-0023).
+                if timeout_seconds < 60:
+                    logger.warning(
+                        "HERMES_DUAL_MEMORY_LLM_TIMEOUT=%s below floor 60s; "
+                        "clamping to 60s (ADR-0023)",
+                        timeout_seconds,
+                    )
+                    timeout_seconds = 60.0
                 client = OpenAI(
                     api_key=llm_config["api_key"],
                     base_url=llm_config["openai_base_url"],
@@ -330,6 +344,16 @@ class MemoryProvider(BaseMemoryProvider):
     ) -> None:
         del messages
 
+        # ADR-0024: subagent/cron system prompts would corrupt the user's
+        # representation. Only primary contexts (plus flush of a primary
+        # session) write hot turns.
+        if self._agent_context not in ("primary", "flush"):
+            logger.debug(
+                "sync_turn() skipped for agent_context=%s (ADR-0024)",
+                self._agent_context,
+            )
+            return
+
         store = self._store
         target_session_id = session_id or self._session_id
         if store is None:
@@ -365,6 +389,12 @@ class MemoryProvider(BaseMemoryProvider):
         )
         with self._sync_lock:
             self._sync_threads = [t for t in self._sync_threads if t.is_alive()]
+            self._sync_thread_sessions = {
+                t: session
+                for t, session in self._sync_thread_sessions.items()
+                if t.is_alive()
+            }
+            self._sync_thread_sessions[thread] = target_session_id
             self._sync_threads.append(thread)
         thread.start()
 
@@ -589,6 +619,51 @@ class MemoryProvider(BaseMemoryProvider):
     def get_config_schema(self) -> list[dict[str, Any]]:
         return []
 
+    def backup_paths(self) -> list[str]:
+        """ADR-0024: declare dual-memory state so ``hermes backup`` captures it.
+
+        Must be callable without initialize() and without network. Resolve
+        from HERMES_HOME env only; fall back to the default profile home.
+        """
+
+        home = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes")
+        return [os.path.join(home, "hermes-dual-memory")]
+
+    def on_memory_write(
+        self,
+        action: str,
+        target: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """ADR-0024: append-only audit trail for built-in Core Memory writes.
+
+        Deliberately does NOT write to Mem0/shadow or mark anything trusted.
+        System-2 extraction (ADR-0005) and quarantine (ADR-0011) remain the
+        only admission path to retrieval. Raw content is never persisted —
+        only a SHA-256 hash plus lightweight metadata.
+        """
+
+        store = self._store
+        if store is None:
+            return
+        try:
+            import hashlib
+
+            content_hash = hashlib.sha256((content or "").encode("utf-8")).hexdigest()
+            meta_json = None
+            if metadata:
+                meta_json = json.dumps(metadata, ensure_ascii=False, sort_keys=True)
+            store.add_audit_entry(
+                action=str(action or ""),
+                target=str(target or ""),
+                content_hash=content_hash,
+                metadata_json=meta_json,
+                session_id=self._session_id or None,
+            )
+        except Exception:
+            logger.exception("Failed to record core-memory audit entry")
+
     def _consolidate(self, session_id: str, *, trigger: str = "unknown") -> Optional[dict[str, Any]]:
         store = self._store
         if store is None or not session_id:
@@ -613,34 +688,58 @@ class MemoryProvider(BaseMemoryProvider):
                 session_id,
             )
             return None
-        try:
-            report = _consolidation.consolidate_once(
-                session_id=session_id,
-                rows=rows,
-                llm_call=self._llm_call,
-                mem0_client=self._mem0,
-                shadow_store=store,
-                admission_check=lambda content: _admission.evaluate_admission(
-                    content,
-                    llm_call=self._llm_call,
-                    timeout_seconds=self._admission_timeout,
-                ),
-                skill_router=lambda report: _procedural.route_new_skills(
-                    report=report,
+        reports: list[dict[str, Any]] = []
+        for chunk_number, chunk in enumerate(_consolidation.chunk_rows(rows), start=1):
+            try:
+                report = _consolidation.consolidate_once(
                     session_id=session_id,
-                    hermes_home=self._hermes_home,
-                ),
-                skill_finalizer=lambda drafts: _procedural.finalize_skill_drafts(
-                    drafts=drafts,
-                    hermes_home=self._hermes_home,
-                ),
-                user_id=self._memory_user_id,
-            )
-            store.mark_consolidated(session_id, [int(row["id"]) for row in rows])
-            return report
-        except Exception:
-            logger.exception("System-2 consolidation skipped for session %s", session_id)
-            return None
+                    rows=chunk,
+                    llm_call=self._llm_call,
+                    mem0_client=self._mem0,
+                    shadow_store=store,
+                    admission_check=lambda content: _admission.evaluate_admission(
+                        content,
+                        llm_call=self._llm_call,
+                        timeout_seconds=self._admission_timeout,
+                    ),
+                    skill_router=lambda report: _procedural.route_new_skills(
+                        report=report,
+                        session_id=session_id,
+                        hermes_home=self._hermes_home,
+                    ),
+                    skill_finalizer=lambda drafts: _procedural.finalize_skill_drafts(
+                        drafts=drafts,
+                        hermes_home=self._hermes_home,
+                    ),
+                    user_id=self._memory_user_id,
+                )
+            except Exception as exc:
+                logger.exception(
+                    "System-2 consolidation skipped for session %s chunk=%d", session_id, chunk_number
+                )
+                # Observability (ADR-0023): record the failure so it is not
+                # silent in the shadow database and can be monitored without
+                # digging through gateway logs.
+                try:
+                    store.set_maintenance_state(
+                        "last_consolidation_error",
+                        json.dumps(
+                            {
+                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "session_id": session_id,
+                                "chunk": chunk_number,
+                                "error_type": type(exc).__name__,
+                                "error": str(exc),
+                            },
+                            ensure_ascii=False,
+                        ),
+                    )
+                except Exception:
+                    logger.exception("Unable to record consolidation failure state")
+                return None
+            store.mark_consolidated(session_id, [int(row["id"]) for row in chunk])
+            reports.append(report)
+        return reports[-1] if reports else None
 
     def _run_maintenance(self, *, trigger: str, already_claimed: bool = False) -> None:
         store = self._store
@@ -685,9 +784,46 @@ class MemoryProvider(BaseMemoryProvider):
             self._maintenance_threads.append(thread)
         thread.start()
 
+    def _wait_for_sync(self, session_id: str, timeout: float = 2.0) -> None:
+        """Ensure the boundary sees all async writes for this session."""
+        with self._sync_lock:
+            threads = [
+                thread
+                for thread in self._sync_threads
+                if thread.is_alive()
+                and self._sync_thread_sessions.get(thread) == session_id
+            ]
+        for thread in threads:
+            thread.join(timeout=timeout)
+
     def _on_session_end_tasks(self, session_id: str) -> None:
+        self._wait_for_sync(session_id)
         self._consolidate(session_id, trigger="on_session_end")
         self._queue_maintenance(trigger="on_session_end")
+
+    def on_session_switch(
+        self,
+        new_session_id: str,
+        *,
+        parent_session_id: str = "",
+        reset: bool = False,
+        rewound: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Update provider scope when Hermes rotates the active session."""
+        del reset, rewound, kwargs
+        self._wait_for_sync(self._session_id)
+        # ADR-0024: record lineage when a real parent exists (/branch,
+        # /resume, compression). reset=True means a genuinely new
+        # conversation with no lineage, so we skip provenance there.
+        if parent_session_id and self._store is not None:
+            try:
+                self._store.record_parent_session(
+                    self._session_id, parent_session_id
+                )
+            except Exception:
+                logger.exception("Failed to record parent_session lineage")
+        self._session_id = new_session_id
 
     def on_session_end(self, messages: List[Dict[str, Any]]) -> None:
         """Start idle consolidation in a daemon thread."""
